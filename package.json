@@ -1,0 +1,49 @@
+{
+  "name": "vietnamese-learning-web",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "prisma generate && next build",
+    "start": "next start",
+    "lint": "next lint",
+    "db:generate": "prisma generate",
+    "db:push": "prisma db push",
+    "db:init": "prisma generate && prisma db push && tsx scripts/init-db.ts",
+    "db:seed": "tsx prisma/seed.ts"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.7.0",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "date-fns": "^4.1.0",
+    "framer-motion": "^11.18.2",
+    "gray-matter": "^4.0.3",
+    "lucide-react": "^0.511.0",
+    "mammoth": "^1.12.0",
+    "next": "^15.3.1",
+    "next-themes": "^0.4.6",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "react-markdown": "^10.1.0",
+    "recharts": "^2.15.3",
+    "remark-gfm": "^4.0.1",
+    "sonner": "^2.0.3",
+    "tailwind-merge": "^3.3.0",
+    "word-extractor": "^1.0.4",
+    "zod": "^3.24.4"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.3",
+    "@types/react": "^19.1.2",
+    "@types/react-dom": "^19.1.2",
+    "autoprefixer": "^10.4.21",
+    "eslint": "^9.25.1",
+    "eslint-config-next": "^15.3.1",
+    "postcss": "^8.5.3",
+    "prisma": "^6.7.0",
+    "tailwindcss": "^3.4.17",
+    "tsx": "^4.19.4",
+    "typescript": "^5.8.3"
+  }
+}

@@ -1,0 +1,226 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum AssignmentType {
+  WRITING
+  SPEAKING
+}
+
+enum AssignmentStatus {
+  PENDING_REVIEW
+  REVIEWING
+  REVIEWED
+  AI_FAILED
+}
+
+enum AiProcessStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+}
+
+enum DisplayType {
+  SENTENCE
+  PARAGRAPH
+  DIALOGUE
+  ESSAY
+  VOCABULARY
+}
+
+enum FeedbackType {
+  GENERAL
+  CORRECTION
+  GRAMMAR
+  VOCABULARY
+  PRONUNCIATION
+  SUMMARY
+}
+
+enum SpeakingUnitType {
+  WORD
+  PHRASE
+  SENTENCE
+  PARAGRAPH
+  ARTICLE
+  DIALOGUE
+}
+
+enum MaterialFileType {
+  PDF
+  WORD
+  POWERPOINT
+  MARKDOWN
+  IMAGE
+  AUDIO
+  VIDEO
+  OTHER
+}
+
+enum MaterialCategory {
+  PRONUNCIATION
+  VOCABULARY
+  GRAMMAR
+  LISTENING
+  SPEAKING
+  READING
+  WRITING
+  INTEGRATED
+}
+
+enum ProgressStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  COMPLETED
+  NEEDS_REVIEW
+}
+
+model UserSession {
+  id         String   @id @default(cuid())
+  tokenHash  String   @unique
+  ip         String?
+  userAgent  String?
+  createdAt  DateTime @default(now())
+  expiresAt  DateTime
+  revokedAt  DateTime?
+}
+
+model Assignment {
+  id                       String           @id @default(cuid())
+  title                    String
+  type                     AssignmentType
+  originalFileName         String
+  originalFilePath         String?
+  originalMimeType         String?
+  originalContent          String
+  aiStructuredContent      Json?
+  aiSummary                String?
+  aiSuggestedReviewPoints  Json?
+  practiceSuggestions      Json?
+  aiStatus                 AiProcessStatus  @default(PENDING)
+  aiErrorMessage           String?
+  status                   AssignmentStatus @default(PENDING_REVIEW)
+  accuracyScore            Int?
+  grammarScore             Int?
+  vocabularyScore          Int?
+  expressionScore          Int?
+  pronunciationScore       Int?
+  fluencyScore             Int?
+  toneScore                Int?
+  overallScore             Int?
+  teacherSummary           String?
+  createdAt                DateTime         @default(now())
+  updatedAt                DateTime         @updatedAt
+  sections                 AssignmentSection[]
+  feedbacks                TeacherFeedback[]
+  speakingUnits            SpeakingUnit[]
+}
+
+model AssignmentSection {
+  id                 String      @id @default(cuid())
+  assignmentId       String
+  sectionTitle       String
+  originalText       String
+  vietnameseText     String?
+  chineseTranslation String?
+  detectedLevel      String?
+  displayType        DisplayType
+  orderIndex         Int
+  createdAt          DateTime    @default(now())
+  updatedAt          DateTime    @updatedAt
+  assignment         Assignment  @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  feedbacks          TeacherFeedback[]
+
+  @@index([assignmentId, orderIndex])
+}
+
+model TeacherFeedback {
+  id                String        @id @default(cuid())
+  assignmentId      String
+  sectionId         String?
+  feedbackType      FeedbackType  @default(GENERAL)
+  originalText      String?
+  correctedText     String?
+  explanation       String?
+  grammarNote       String?
+  vocabularyNote    String?
+  pronunciationNote String?
+  score             Int?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  assignment        Assignment    @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  section           AssignmentSection? @relation(fields: [sectionId], references: [id], onDelete: SetNull)
+
+  @@index([assignmentId])
+  @@index([sectionId])
+}
+
+model SpeakingUnit {
+  id          String           @id @default(cuid())
+  assignmentId String
+  unitType    SpeakingUnitType
+  content     String
+  orderIndex  Int
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  assignment  Assignment       @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  recordings  Recording[]
+
+  @@index([assignmentId, orderIndex])
+}
+
+model Recording {
+  id             String            @id @default(cuid())
+  speakingUnitId  String
+  filePath       String
+  duration       Float?
+  mimeType       String
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  speakingUnit   SpeakingUnit      @relation(fields: [speakingUnitId], references: [id], onDelete: Cascade)
+  feedback       SpeakingFeedback?
+
+  @@index([speakingUnitId, createdAt])
+}
+
+model SpeakingFeedback {
+  id                 String    @id @default(cuid())
+  recordingId        String    @unique
+  pronunciationIssue String?
+  toneIssue          String?
+  fluencyComment     String?
+  speedComment       String?
+  repeatWords        String?
+  teacherSuggestion  String?
+  pronunciationScore Int?
+  fluencyScore       Int?
+  toneScore          Int?
+  overallScore       Int?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+  recording          Recording @relation(fields: [recordingId], references: [id], onDelete: Cascade)
+}
+
+model CourseMaterial {
+  id               String           @id @default(cuid())
+  title            String
+  fileName         String
+  filePath         String
+  mimeType         String?
+  fileType         MaterialFileType
+  category         MaterialCategory
+  tags             Json?
+  note             String?
+  progressStatus   ProgressStatus   @default(NOT_STARTED)
+  progressPercent  Int              @default(0)
+  currentPage      Int?
+  currentChapter   String?
+  currentTimestamp String?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+}
