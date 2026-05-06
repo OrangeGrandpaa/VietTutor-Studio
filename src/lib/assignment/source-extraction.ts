@@ -23,7 +23,10 @@ const KIMI_FILE_EXTRACT_EXTENSIONS = new Set([
   ".log"
 ]);
 
-export const assignmentUploadConfig = {
+export const assignmentUploadConfig: {
+  allowedExtensions: string[];
+  allowedMimeTypes: string[];
+} = {
   allowedExtensions: [...LOCAL_TEXT_EXTENSIONS, ...KIMI_FILE_EXTRACT_EXTENSIONS],
   allowedMimeTypes: [
     "text/markdown",
@@ -41,7 +44,7 @@ export const assignmentUploadConfig = {
     "application/xml",
     "text/xml"
   ]
-} as const;
+};
 
 function normalizeLineBreaks(value: string) {
   return value.replace(/\r\n/g, "\n").replace(/\r/g, "\n").trim();

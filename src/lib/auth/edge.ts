@@ -19,8 +19,8 @@ function fromBase64Url(value: string) {
   return new TextDecoder().decode(bytes);
 }
 
-function toBase64Url(buffer: ArrayBuffer) {
-  const bytes = new Uint8Array(buffer);
+function toBase64Url(buffer: ArrayBuffer | Uint8Array) {
+  const bytes = buffer instanceof Uint8Array ? buffer : new Uint8Array(buffer);
   let binary = "";
 
   bytes.forEach((byte) => {

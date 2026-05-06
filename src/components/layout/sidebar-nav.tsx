@@ -1,18 +1,17 @@
 "use client";
 
 import Link from "next/link";
+import type { Route } from "next";
 import { usePathname } from "next/navigation";
-import {
-  BookText,
-  FolderKanban,
-  LayoutDashboard,
-  MessageSquareQuote,
-  Settings2
-} from "lucide-react";
+import { BookText, FolderKanban, LayoutDashboard, MessageSquareQuote, Settings2 } from "lucide-react";
 
 import { cn } from "@/lib/utils/cn";
 
-const navItems = [
+const navItems: Array<{
+  href: Route;
+  label: string;
+  icon: typeof LayoutDashboard;
+}> = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/assignments/writing", label: "笔头作业", icon: BookText },
   { href: "/assignments/speaking", label: "口语作业", icon: MessageSquareQuote },

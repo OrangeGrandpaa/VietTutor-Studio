@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { AssignmentStatus, AssignmentType, AiProcessStatus } from "@prisma/client";
+import type { Route } from "next";
+import { AiProcessStatus, AssignmentStatus, AssignmentType } from "@prisma/client";
 
 import { AssignmentStatusBadge } from "@/components/assignment/assignment-status-badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -38,7 +39,7 @@ export function RecentAssignmentList({
           items.map((item) => (
             <Link
               key={item.id}
-              href={`${detailBasePath}/${item.id}`}
+              href={`${detailBasePath}/${item.id}` as Route}
               className="flex items-center justify-between rounded-2xl border border-border/70 px-4 py-3 transition hover:bg-accent/30"
             >
               <div className="space-y-1">

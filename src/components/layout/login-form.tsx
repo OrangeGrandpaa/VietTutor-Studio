@@ -1,5 +1,6 @@
 "use client";
 
+import type { Route } from "next";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { LockKeyhole } from "lucide-react";
@@ -23,9 +24,7 @@ export function LoginForm() {
           <LockKeyhole className="h-6 w-6" />
         </div>
         <CardTitle className="font-serif text-4xl">进入学习空间</CardTitle>
-        <CardDescription>
-          密钥访问。登录成功后写入 HttpOnly Cookie 并在服务端校验。
-        </CardDescription>
+        <CardDescription>输入访问密码，登录成功后会写入 HttpOnly Cookie 并在服务端校验。</CardDescription>
       </CardHeader>
       <CardContent>
         <form
@@ -48,7 +47,7 @@ export function LoginForm() {
               }
 
               toast.success("登录成功。");
-              router.push(searchParams.get("next") ?? "/dashboard");
+              router.push((searchParams.get("next") ?? "/dashboard") as Route);
               router.refresh();
             } catch (error) {
               toast.error(error instanceof Error ? error.message : "登录失败。");

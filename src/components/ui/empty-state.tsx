@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { Route } from "next";
 
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,7 +12,7 @@ export function EmptyState({
 }: {
   title: string;
   description: string;
-  actionHref?: string;
+  actionHref?: Route;
   actionLabel?: string;
 }) {
   return (
