@@ -3,10 +3,11 @@
 Last updated: 2026-05-07
 
 This file is a handoff summary of the current deployment state for this project.
-Use it together with `DEPLOY_ALIYUN.md`:
+Use it together with `DEPLOY_ALIYUN.md` and `CHANGELOG.md`:
 
 - `DEPLOY_ALIYUN.md`: generic deployment procedure
 - `PRODUCTION_STATUS.md`: current real-world server state and operational notes
+- `CHANGELOG.md`: version-by-version change history
 
 ## Current production URLs
 
@@ -56,6 +57,30 @@ The application was verified locally on the server with:
 - `curl -I http://127.0.0.1:3000`
 - `curl -I https://vietkiet.cn`
 - `curl -I https://www.vietkiet.cn`
+
+## Latest deployed release
+
+Latest confirmed deployed commit:
+
+- `696d9f8` - `Simplify schema and document production deployment`
+
+This release included:
+
+- Added deployment and handoff documents:
+  - `DEPLOY_ALIYUN.md`
+  - `PRODUCTION_STATUS.md`
+  - `scripts/deploy.sh`
+- Simplified Prisma schema by removing currently unused fields from:
+  - `Assignment`
+  - `TeacherFeedback`
+  - `SpeakingFeedback`
+  - `CourseMaterial`
+- Removed matching dead prompt output fields, API parameters, dashboard references, and page display hooks
+- Synced the production deployment flow with the requirement that schema-changing releases must run `npm run db:push`
+
+Important release note:
+
+- This release was not only a UI/code cleanup; it changed database structure and therefore required `npm run db:push` during deployment
 
 ## systemd service
 

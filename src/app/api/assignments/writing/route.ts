@@ -8,11 +8,13 @@ import {
   assignmentUploadConfig,
   extractAssignmentSourceText
 } from "@/lib/assignment/source-extraction";
+import { logAuditEvent } from "@/lib/audit/log";
 import { ensureAuthenticatedApi } from "@/lib/auth/session";
 import { prisma } from "@/lib/db/prisma";
 import { saveUploadedFile } from "@/lib/storage";
 import { jsonError, jsonOk } from "@/lib/utils/http";
 import { mapDisplayType } from "@/lib/utils/mapping";
+import { getRequestMeta } from "@/lib/utils/request";
 import { sanitizeOptionalText } from "@/lib/utils/sanitize";
 
 export async function GET() {
@@ -32,6 +34,7 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   const session = await ensureAuthenticatedApi();
+  const requestMeta = getRequestMeta(request);
 
   if (!session) {
     return jsonError("Unauthorized", 401);
@@ -100,6 +103,13 @@ export async function POST(request: NextRequest) {
     }
 
     return created;
+  });
+
+  logAuditEvent({
+    event: "assignments.writing.upload",
+    status: "success",
+    ...requestMeta,
+    resourceId: assignment.id
   });
 
   return jsonOk(

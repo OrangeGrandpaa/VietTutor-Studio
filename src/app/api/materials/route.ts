@@ -1,12 +1,14 @@
 import { Prisma } from "@prisma/client";
 import { NextRequest } from "next/server";
 
+import { logAuditEvent } from "@/lib/audit/log";
 import { ensureAuthenticatedApi } from "@/lib/auth/session";
 import { prisma } from "@/lib/db/prisma";
 import { deleteFile, saveUploadedFile, StorageValidationError } from "@/lib/storage";
 import { getMaxUploadSizeBytes } from "@/lib/utils/env";
 import { jsonError, jsonOk } from "@/lib/utils/http";
 import { inferMaterialFileType, mapMaterialCategory } from "@/lib/utils/mapping";
+import { getRequestMeta } from "@/lib/utils/request";
 import { sanitizeOptionalText } from "@/lib/utils/sanitize";
 
 const supportedMaterialTypes =
@@ -112,6 +114,7 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   const session = await ensureAuthenticatedApi();
   if (!session) return jsonError("Unauthorized", 401);
+  const requestMeta = getRequestMeta(request);
 
   let savedRelativePath: string | null = null;
 
@@ -180,6 +183,13 @@ export async function POST(request: NextRequest) {
       }
     });
 
+    logAuditEvent({
+      event: "materials.upload",
+      status: "success",
+      ...requestMeta,
+      resourceId: material.id
+    });
+
     return jsonOk({ success: true, material }, 201);
   } catch (error) {
     if (savedRelativePath) {
@@ -189,6 +199,12 @@ export async function POST(request: NextRequest) {
     }
 
     const formatted = formatMaterialUploadError(error);
+    logAuditEvent({
+      event: "materials.upload",
+      status: "failure",
+      ...requestMeta,
+      message: formatted.message
+    });
     console.error("[materials.upload] upload failed", error);
     return jsonError(formatted.message, formatted.status);
   }
