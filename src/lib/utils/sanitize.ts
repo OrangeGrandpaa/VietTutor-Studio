@@ -10,10 +10,3 @@ export function sanitizeOptionalText(input: string | null | undefined) {
   const value = sanitizeText(input);
   return value.length > 0 ? value : null;
 }
-
-export function splitTags(input: string) {
-  return input
-    .split(/[,\n，]/)
-    .map((item) => sanitizeText(item))
-    .filter(Boolean);
-}

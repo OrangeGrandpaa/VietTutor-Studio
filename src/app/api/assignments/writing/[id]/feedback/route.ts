@@ -1,4 +1,4 @@
-import { AssignmentStatus, FeedbackType } from "@prisma/client";
+import { AssignmentStatus } from "@prisma/client";
 import { NextRequest } from "next/server";
 
 import { buildWritingReviewGroups } from "@/lib/assignment/writing";
@@ -41,8 +41,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   const existing = await prisma.teacherFeedback.findFirst({
     where: {
       assignmentId: id,
-      sectionId: body.sectionId,
-      feedbackType: FeedbackType.CORRECTION
+      sectionId: body.sectionId
     },
     orderBy: { updatedAt: "desc" }
   });
@@ -60,8 +59,6 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       data: {
         assignmentId: id,
         sectionId: body.sectionId,
-        feedbackType: FeedbackType.CORRECTION,
-        originalText: section.originalText,
         explanation: note,
         score
       }
@@ -75,7 +72,6 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         orderBy: { orderIndex: "asc" },
         include: {
           feedbacks: {
-            where: { feedbackType: FeedbackType.CORRECTION },
             orderBy: { updatedAt: "desc" }
           }
         }
@@ -99,10 +95,6 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     where: { id },
     data: {
       accuracyScore: stats.accuracy,
-      teacherSummary: null,
-      grammarScore: null,
-      vocabularyScore: null,
-      expressionScore: null,
       status: nextStatus
     }
   });

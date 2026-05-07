@@ -74,7 +74,6 @@ export default async function SpeakingAssignmentDetailPage({
           <Badge variant="outline">已录音 {stats.recordedUnits}</Badge>
           <Badge variant="outline">已批阅 {stats.reviewedUnits}</Badge>
           <Badge variant="outline">平均综合分 {formatPercent(stats.averageOverallScore)}</Badge>
-          {assignment.aiSummary ? <Badge variant="outline">{assignment.aiSummary}</Badge> : null}
         </div>
 
         {assignment.aiStatus === "FAILED" && assignment.aiErrorMessage ? (

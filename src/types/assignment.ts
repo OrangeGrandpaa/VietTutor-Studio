@@ -16,8 +16,6 @@ export type WritingStructuredContent = {
   title: string;
   assignment_type: "writing";
   parts: WritingPart[];
-  ai_summary: string;
-  suggested_review_points: string[];
 };
 
 export type SpeakingUnitPayload = {
@@ -30,6 +28,4 @@ export type SpeakingStructuredContent = {
   title: string;
   assignment_type: "speaking";
   units: SpeakingUnitPayload[];
-  ai_summary: string;
-  practice_suggestions: string[];
 };

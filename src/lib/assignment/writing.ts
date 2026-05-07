@@ -64,8 +64,6 @@ export function normalizeWritingStructure(value: unknown): WritingStructuredCont
     title?: unknown;
     assignment_type?: unknown;
     parts?: unknown;
-    ai_summary?: unknown;
-    suggested_review_points?: unknown;
   };
 
   const parts = Array.isArray(raw.parts)
@@ -98,14 +96,17 @@ export function normalizeWritingStructure(value: unknown): WritingStructuredCont
                     prompt: normalizeText(rawQuestion.prompt),
                     answer: normalizeText(rawQuestion.answer),
                     detected_level: normalizeText(rawQuestion.detected_level),
-                    suggested_display_type: normalizeDisplayType(rawQuestion.suggested_display_type) as WritingPart["questions"][number]["suggested_display_type"]
+                    suggested_display_type:
+                      normalizeDisplayType(
+                        rawQuestion.suggested_display_type
+                      ) as WritingPart["questions"][number]["suggested_display_type"]
                   };
                 })
                 .filter((item): item is NonNullable<typeof item> => Boolean(item))
             : [];
 
           return {
-            part_title: normalizeText(rawPart.part_title) || `部分 ${partIndex + 1}`,
+            part_title: normalizeText(rawPart.part_title) || `Section ${partIndex + 1}`,
             instruction: normalizeText(rawPart.instruction),
             questions
           };
@@ -114,20 +115,16 @@ export function normalizeWritingStructure(value: unknown): WritingStructuredCont
     : [];
 
   return {
-    title: normalizeText(raw.title) || "未命名笔头作业",
+    title: normalizeText(raw.title) || "Untitled writing assignment",
     assignment_type: raw.assignment_type === "writing" ? "writing" : "writing",
-    parts,
-    ai_summary: normalizeText(raw.ai_summary),
-    suggested_review_points: Array.isArray(raw.suggested_review_points)
-      ? raw.suggested_review_points.map((item) => normalizeText(item)).filter(Boolean)
-      : []
+    parts
   };
 }
 
 export function flattenWritingQuestions(structured: WritingStructuredContent) {
   return structured.parts.flatMap((part, partIndex) =>
     part.questions.map((question, questionIndex) => ({
-      partTitle: part.part_title || `部分 ${partIndex + 1}`,
+      partTitle: part.part_title || `Section ${partIndex + 1}`,
       partIndex,
       instruction: part.instruction,
       questionNumber: question.question_number || questionIndex + 1,
@@ -149,28 +146,24 @@ export function buildFallbackWritingStructure(sections: SectionWithFeedbacks[]) 
   }));
 
   return {
-    title: "未命名笔头作业",
+    title: "Untitled writing assignment",
     assignment_type: "writing" as const,
     parts: [
       {
-        part_title: "题目列表",
+        part_title: "Question list",
         instruction: "",
         questions
       }
-    ],
-    ai_summary: "",
-    suggested_review_points: []
+    ]
   };
 }
 
 function extractLatestFeedback(feedbacks: TeacherFeedback[]) {
-  const correctionFeedbacks = feedbacks.filter((item) => item.feedbackType === "CORRECTION");
-
-  if (!correctionFeedbacks.length) {
+  if (!feedbacks.length) {
     return null;
   }
 
-  return [...correctionFeedbacks].sort((a, b) => +new Date(b.updatedAt) - +new Date(a.updatedAt))[0] ?? null;
+  return [...feedbacks].sort((a, b) => +new Date(b.updatedAt) - +new Date(a.updatedAt))[0] ?? null;
 }
 
 export function buildWritingReviewGroups(
@@ -192,7 +185,7 @@ export function buildWritingReviewGroups(
       id: section.id,
       orderIndex: section.orderIndex,
       questionNumber: question?.questionNumber ?? index + 1,
-      partTitle: question?.partTitle ?? "题目列表",
+      partTitle: question?.partTitle ?? "Question list",
       partIndex: question?.partIndex ?? 0,
       sectionTitle: section.sectionTitle,
       prompt: question?.prompt || section.originalText,
@@ -211,7 +204,7 @@ export function buildWritingReviewGroups(
     const correctQuestions = questions.filter((item) => item.isCorrect === true).length;
 
     return {
-      partTitle: part.part_title || `部分 ${partIndex + 1}`,
+      partTitle: part.part_title || `Section ${partIndex + 1}`,
       partIndex,
       instruction: part.instruction,
       totalQuestions: questions.length,
@@ -227,7 +220,7 @@ export function buildWritingReviewGroups(
     const correctQuestions = questionItems.filter((item) => item.isCorrect === true).length;
 
     groups.push({
-      partTitle: "题目列表",
+      partTitle: "Question list",
       partIndex: 0,
       instruction: "",
       totalQuestions: questionItems.length,

@@ -11,8 +11,6 @@ export const speakingAssignmentStructurePrompt = `
       "content": "",
       "order_index": 1
     }
-  ],
-  "ai_summary": "",
-  "practice_suggestions": []
+  ]
 }
 `.trim();

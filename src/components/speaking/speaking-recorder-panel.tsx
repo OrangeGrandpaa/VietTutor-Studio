@@ -17,15 +17,7 @@ type RecordingItem = {
   duration: number | null;
   createdAt: string | Date;
   feedback?: {
-    pronunciationIssue: string | null;
-    toneIssue: string | null;
-    fluencyComment: string | null;
-    speedComment: string | null;
-    repeatWords: string | null;
     teacherSuggestion: string | null;
-    pronunciationScore: number | null;
-    fluencyScore: number | null;
-    toneScore: number | null;
     overallScore: number | null;
   } | null;
 };

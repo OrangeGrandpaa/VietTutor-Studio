@@ -67,7 +67,6 @@ export default async function WritingAssignmentDetailPage({
           <Badge variant="outline">总题数 {stats.totalQuestions}</Badge>
           <Badge variant="outline">已批阅 {stats.reviewedQuestions}</Badge>
           <Badge variant="outline">整体准确率 {formatPercent(stats.accuracy)}</Badge>
-          {assignment.aiSummary ? <Badge variant="outline">{assignment.aiSummary}</Badge> : null}
         </div>
 
         {assignment.aiStatus === "FAILED" && assignment.aiErrorMessage ? (

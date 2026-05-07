@@ -7,7 +7,7 @@ import { deleteFile, saveUploadedFile, StorageValidationError } from "@/lib/stor
 import { getMaxUploadSizeBytes } from "@/lib/utils/env";
 import { jsonError, jsonOk } from "@/lib/utils/http";
 import { inferMaterialFileType, mapMaterialCategory } from "@/lib/utils/mapping";
-import { sanitizeOptionalText, splitTags } from "@/lib/utils/sanitize";
+import { sanitizeOptionalText } from "@/lib/utils/sanitize";
 
 const supportedMaterialTypes =
   "PDF\u3001Word\u3001PPT\u3001Markdown\u3001\u56fe\u7247\u3001\u97f3\u9891\u548c\u89c6\u9891";
@@ -167,7 +167,6 @@ export async function POST(request: NextRequest) {
 
     const title =
       sanitizeOptionalText(formData.get("title")?.toString()) ?? file.name.replace(/\.[^.]+$/, "");
-    const tags = splitTags(formData.get("tags")?.toString() ?? "");
 
     const material = await prisma.courseMaterial.create({
       data: {
@@ -177,9 +176,7 @@ export async function POST(request: NextRequest) {
         mimeType: saved.mimeType,
         fileType: inferMaterialFileType(file.name, saved.mimeType),
         category: mapMaterialCategory(formData.get("category")?.toString() ?? "INTEGRATED"),
-        tags,
-        note: sanitizeOptionalText(formData.get("note")?.toString()),
-        currentChapter: sanitizeOptionalText(formData.get("currentChapter")?.toString())
+        note: sanitizeOptionalText(formData.get("note")?.toString())
       }
     });
 

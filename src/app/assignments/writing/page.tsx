@@ -63,7 +63,7 @@ export default async function WritingAssignmentsPage() {
                 </CardHeader>
                 <CardContent className="flex flex-wrap items-center justify-between gap-4">
                   <p className="max-w-2xl text-sm text-muted-foreground">
-                    {assignment.aiSummary || "进入详情页可逐题输入答案、查看统计并完成批阅。"}
+                    进入详情页可逐题输入答案、查看统计并完成批阅。
                   </p>
                   <div className="flex flex-wrap items-center gap-2">
                     <Link href={`/assignments/writing/${assignment.id}`} className={buttonVariants({ variant: "outline" })}>

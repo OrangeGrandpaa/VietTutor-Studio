@@ -119,9 +119,7 @@ export function MaterialProgressForm({
                   note: formData.get("note")?.toString(),
                   progressStatus: formData.get("progressStatus")?.toString(),
                   progressPercent: calculateProgressPercent(currentPage, totalPages) ?? 0,
-                  currentPage,
-                  currentChapter: null,
-                  currentTimestamp: null
+                  currentPage
                 })
               });
 

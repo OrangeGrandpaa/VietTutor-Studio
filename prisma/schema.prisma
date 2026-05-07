@@ -33,15 +33,6 @@ enum DisplayType {
   VOCABULARY
 }
 
-enum FeedbackType {
-  GENERAL
-  CORRECTION
-  GRAMMAR
-  VOCABULARY
-  PRONUNCIATION
-  SUMMARY
-}
-
 enum SpeakingUnitType {
   WORD
   PHRASE
@@ -99,21 +90,11 @@ model Assignment {
   originalMimeType         String?
   originalContent          String
   aiStructuredContent      Json?
-  aiSummary                String?
-  aiSuggestedReviewPoints  Json?
-  practiceSuggestions      Json?
   aiStatus                 AiProcessStatus  @default(PENDING)
   aiErrorMessage           String?
   status                   AssignmentStatus @default(PENDING_REVIEW)
   accuracyScore            Int?
-  grammarScore             Int?
-  vocabularyScore          Int?
-  expressionScore          Int?
-  pronunciationScore       Int?
-  fluencyScore             Int?
-  toneScore                Int?
   overallScore             Int?
-  teacherSummary           String?
   createdAt                DateTime         @default(now())
   updatedAt                DateTime         @updatedAt
   sections                 AssignmentSection[]
@@ -143,13 +124,7 @@ model TeacherFeedback {
   id                String        @id @default(cuid())
   assignmentId      String
   sectionId         String?
-  feedbackType      FeedbackType  @default(GENERAL)
-  originalText      String?
-  correctedText     String?
   explanation       String?
-  grammarNote       String?
-  vocabularyNote    String?
-  pronunciationNote String?
   score             Int?
   createdAt         DateTime      @default(now())
   updatedAt         DateTime      @updatedAt
@@ -191,15 +166,7 @@ model Recording {
 model SpeakingFeedback {
   id                 String    @id @default(cuid())
   recordingId        String    @unique
-  pronunciationIssue String?
-  toneIssue          String?
-  fluencyComment     String?
-  speedComment       String?
-  repeatWords        String?
   teacherSuggestion  String?
-  pronunciationScore Int?
-  fluencyScore       Int?
-  toneScore          Int?
   overallScore       Int?
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
@@ -214,13 +181,10 @@ model CourseMaterial {
   mimeType         String?
   fileType         MaterialFileType
   category         MaterialCategory
-  tags             Json?
   note             String?
   progressStatus   ProgressStatus   @default(NOT_STARTED)
   progressPercent  Int              @default(0)
   currentPage      Int?
-  currentChapter   String?
-  currentTimestamp String?
   createdAt        DateTime         @default(now())
   updatedAt        DateTime         @updatedAt
 }

@@ -70,8 +70,6 @@ export async function POST(request: NextRequest) {
         originalMimeType: savedFile.mimeType,
         originalContent: extracted.text,
         aiStructuredContent: structured as unknown as Prisma.InputJsonValue,
-        aiSummary: structured.ai_summary,
-        practiceSuggestions: structured.practice_suggestions as unknown as Prisma.InputJsonValue,
         aiStatus,
         aiErrorMessage,
         status: AssignmentStatus.PENDING_REVIEW

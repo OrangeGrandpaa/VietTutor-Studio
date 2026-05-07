@@ -63,7 +63,7 @@ export default async function SpeakingAssignmentsPage() {
                 </CardHeader>
                 <CardContent className="flex flex-wrap items-center justify-between gap-4">
                   <p className="max-w-2xl text-sm text-muted-foreground">
-                    {assignment.aiSummary || "进入详情页可查看练习单元、录音情况和逐条批阅结果。"}
+                    进入详情页可查看练习单元、录音情况和逐条批阅结果。
                   </p>
                   <div className="flex flex-wrap items-center gap-2">
                     <Link href={`/assignments/speaking/${assignment.id}`} className={buttonVariants({ variant: "outline" })}>

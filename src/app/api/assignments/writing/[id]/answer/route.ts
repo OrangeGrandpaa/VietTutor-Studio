@@ -1,4 +1,4 @@
-import { AssignmentStatus, FeedbackType } from "@prisma/client";
+import { AssignmentStatus } from "@prisma/client";
 import { NextRequest } from "next/server";
 
 import { buildWritingReviewGroups } from "@/lib/assignment/writing";
@@ -47,8 +47,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     await tx.teacherFeedback.deleteMany({
       where: {
         assignmentId: id,
-        sectionId: body.sectionId,
-        feedbackType: FeedbackType.CORRECTION
+        sectionId: body.sectionId
       }
     });
   });
@@ -60,7 +59,6 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
         orderBy: { orderIndex: "asc" },
         include: {
           feedbacks: {
-            where: { feedbackType: FeedbackType.CORRECTION },
             orderBy: { updatedAt: "desc" }
           }
         }
@@ -84,7 +82,6 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     where: { id },
     data: {
       accuracyScore: stats.accuracy,
-      teacherSummary: null,
       status: nextStatus
     }
   });

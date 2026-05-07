@@ -26,8 +26,6 @@ export const writingAssignmentStructurePrompt = `
         }
       ]
     }
-  ],
-  "ai_summary": "",
-  "suggested_review_points": []
+  ]
 }
 `.trim();

@@ -53,17 +53,15 @@ export function buildWritingFallback(markdown: string): WritingStructuredContent
   })) as WritingStructuredContent["parts"][number]["questions"];
 
   return {
-    title: (parsed.data.title as string | undefined) ?? "未命名笔头作业",
+    title: (parsed.data.title as string | undefined) ?? "Untitled writing assignment",
     assignment_type: "writing",
     parts: [
       {
-        part_title: "题目列表",
+        part_title: "Question list",
         instruction: "",
         questions
       }
-    ],
-    ai_summary: "AI 结构化失败，当前为系统兜底拆题结果。",
-    suggested_review_points: ["可稍后重试 AI 结构化，或直接逐题批阅当前拆分结果。"]
+    ]
   };
 }
 
@@ -83,10 +81,8 @@ export function buildSpeakingFallback(markdown: string): SpeakingStructuredConte
   }) as SpeakingStructuredContent["units"];
 
   return {
-    title: (parsed.data.title as string | undefined) ?? "未命名口语作业",
+    title: (parsed.data.title as string | undefined) ?? "Untitled speaking assignment",
     assignment_type: "speaking",
-    units,
-    ai_summary: "AI 结构化失败，当前为系统兜底拆分结果。",
-    practice_suggestions: ["建议稍后重新调用 AI，以获得更精细的朗读单元拆分。"]
+    units
   };
 }

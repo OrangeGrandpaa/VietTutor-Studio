@@ -36,9 +36,7 @@ const writingSchema = z.object({
         )
       })
     )
-    .default([]),
-  ai_summary: z.string().default(""),
-  suggested_review_points: z.array(z.string()).default([])
+    .default([])
 });
 
 const speakingSchema = z.object({
@@ -50,9 +48,7 @@ const speakingSchema = z.object({
       content: z.string().default(""),
       order_index: z.number().int().positive()
     })
-  ),
-  ai_summary: z.string().default(""),
-  practice_suggestions: z.array(z.string()).default([])
+  )
 });
 
 function getKimiConfig() {

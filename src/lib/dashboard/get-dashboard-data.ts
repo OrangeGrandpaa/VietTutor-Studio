@@ -32,7 +32,6 @@ export async function getDashboardData() {
         type: true,
         status: true,
         accuracyScore: true,
-        pronunciationScore: true,
         overallScore: true,
         createdAt: true
       }
@@ -46,7 +45,6 @@ export async function getDashboardData() {
         type: true,
         status: true,
         accuracyScore: true,
-        pronunciationScore: true,
         overallScore: true,
         createdAt: true
       }

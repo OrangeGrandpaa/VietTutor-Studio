@@ -5,16 +5,12 @@ import { ensureAuthenticatedApi } from "@/lib/auth/session";
 import { prisma } from "@/lib/db/prisma";
 import { deleteFile } from "@/lib/storage";
 import { jsonError, jsonOk } from "@/lib/utils/http";
-import { sanitizeOptionalText, splitTags } from "@/lib/utils/sanitize";
+import { sanitizeOptionalText } from "@/lib/utils/sanitize";
 
 const TEXT = {
   notFound: "\u8bfe\u4ef6\u4e0d\u5b58\u5728\u3002",
   emptyUpdate: "\u66f4\u65b0\u5185\u5bb9\u4e0d\u80fd\u4e3a\u7a7a\u3002"
 } as const;
-
-function hasOwnKey<T extends object>(value: T, key: PropertyKey) {
-  return Object.prototype.hasOwnProperty.call(value, key);
-}
 
 export async function GET(_: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await ensureAuthenticatedApi();
@@ -35,12 +31,9 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     | {
         title?: string;
         note?: string;
-        tags?: string;
         progressStatus?: keyof typeof ProgressStatus;
         progressPercent?: number;
         currentPage?: number | null;
-        currentChapter?: string | null;
-        currentTimestamp?: string | null;
       }
     | null;
 
@@ -51,7 +44,6 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     data: {
       title: sanitizeOptionalText(body.title) ?? undefined,
       note: sanitizeOptionalText(body.note) ?? undefined,
-      tags: body.tags !== undefined ? splitTags(body.tags) : undefined,
       progressStatus: body.progressStatus ? ProgressStatus[body.progressStatus] : undefined,
       progressPercent:
         typeof body.progressPercent === "number"
@@ -62,13 +54,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
           ? null
           : typeof body.currentPage === "number"
             ? Math.max(0, Math.round(body.currentPage))
-            : undefined,
-      currentChapter: hasOwnKey(body, "currentChapter")
-        ? sanitizeOptionalText(body.currentChapter ?? "") ?? null
-        : undefined,
-      currentTimestamp: hasOwnKey(body, "currentTimestamp")
-        ? sanitizeOptionalText(body.currentTimestamp ?? "") ?? null
-        : undefined
+            : undefined
     }
   });
 

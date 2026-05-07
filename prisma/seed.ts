@@ -19,7 +19,6 @@ async function main() {
         fileType: MaterialFileType.MARKDOWN,
         category: MaterialCategory.PRONUNCIATION,
         mimeType: "text/markdown",
-        tags: ["发音", "示例"],
         note: "数据库初始化时写入的示例记录，可随时删除。",
         progressStatus: ProgressStatus.NOT_STARTED,
         progressPercent: 0

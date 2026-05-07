@@ -12,7 +12,6 @@ type RecentItem = {
   type: AssignmentType;
   status: AssignmentStatus;
   accuracyScore: number | null;
-  pronunciationScore?: number | null;
   overallScore?: number | null;
   createdAt: Date;
   aiStatus?: AiProcessStatus;
@@ -48,9 +47,7 @@ export function RecentAssignmentList({
               </div>
               <div className="flex items-center gap-3">
                 <p className="text-sm font-medium">
-                  {item.type === "WRITING"
-                    ? formatPercent(item.accuracyScore)
-                    : formatPercent(item.overallScore ?? item.pronunciationScore ?? null)}
+                  {item.type === "WRITING" ? formatPercent(item.accuracyScore) : formatPercent(item.overallScore ?? null)}
                 </p>
                 <AssignmentStatusBadge status={item.status} aiStatus={item.aiStatus} />
               </div>

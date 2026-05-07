@@ -83,15 +83,9 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
           data: {
             title: structured.title || assignment.title,
             aiStructuredContent: structured as unknown as Prisma.InputJsonValue,
-            aiSummary: structured.ai_summary,
-            practiceSuggestions: structured.practice_suggestions as unknown as Prisma.InputJsonValue,
             aiStatus: "SUCCEEDED",
             aiErrorMessage: null,
-            pronunciationScore: null,
-            fluencyScore: null,
-            toneScore: null,
             overallScore: null,
-            teacherSummary: null,
             status: AssignmentStatus.PENDING_REVIEW
           }
         });
