@@ -1,5 +1,5 @@
 import { AssignmentStatus, AssignmentType, Prisma } from "@prisma/client";
-import { NextRequest } from "next/server";
+import { after, NextRequest } from "next/server";
 
 import { buildWritingFallback } from "@/lib/ai/fallback";
 import { structureWritingAssignment } from "@/lib/ai/kimi";
@@ -83,6 +83,90 @@ function formatWritingUploadError(error: unknown) {
   };
 }
 
+function buildSectionRows(assignmentId: string, questions: ReturnType<typeof flattenWritingQuestions>) {
+  return questions.map((question, index) => ({
+    assignmentId,
+    sectionTitle: `${question.partTitle} / Question ${question.questionNumber}`,
+    originalText: question.prompt,
+    vietnameseText: null,
+    chineseTranslation: null,
+    detectedLevel: question.detectedLevel,
+    displayType: mapDisplayType(question.displayType),
+    orderIndex: index + 1
+  }));
+}
+
+async function runWritingStructureJob(assignmentId: string, originalContent: string, fallbackTitle: string) {
+  try {
+    const structured = await structureWritingAssignment(originalContent);
+    const questions = flattenWritingQuestions(structured);
+
+    await prisma.$transaction(async (tx) => {
+      const assignment = await tx.assignment.findUnique({
+        where: { id: assignmentId },
+        include: {
+          sections: {
+            include: { feedbacks: true }
+          }
+        }
+      });
+
+      if (!assignment) {
+        return;
+      }
+
+      const hasUserWork = assignment.sections.some(
+        (section) => Boolean(section.vietnameseText) || section.feedbacks.length > 0
+      );
+
+      if (hasUserWork) {
+        await tx.assignment.update({
+          where: { id: assignmentId },
+          data: {
+            aiStatus: "FAILED",
+            aiErrorMessage: "AI 结构化完成时题目已有答案或批阅，为避免覆盖内容，已保留当前题目。"
+          }
+        });
+        return;
+      }
+
+      await tx.assignmentSection.deleteMany({ where: { assignmentId } });
+
+      await tx.assignment.update({
+        where: { id: assignmentId },
+        data: {
+          title: structured.title || fallbackTitle,
+          aiStructuredContent: structured as unknown as Prisma.InputJsonValue,
+          aiStatus: "SUCCEEDED",
+          aiErrorMessage: null,
+          accuracyScore: null,
+          status: AssignmentStatus.PENDING_REVIEW
+        }
+      });
+
+      if (questions.length > 0) {
+        await tx.assignmentSection.createMany({
+          data: buildSectionRows(assignmentId, questions)
+        });
+      }
+    });
+
+    logger.info("assignments.writing.structure_job.succeeded", { assignmentId });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "AI structure generation failed.";
+
+    await prisma.assignment.update({
+      where: { id: assignmentId },
+      data: {
+        aiStatus: "FAILED",
+        aiErrorMessage: message
+      }
+    });
+
+    logger.error("assignments.writing.structure_job.failed", { assignmentId, error });
+  }
+}
+
 export async function GET() {
   const session = await ensureAuthenticatedApi();
 
@@ -125,21 +209,9 @@ export async function POST(request: NextRequest) {
     });
     savedRelativePath = savedFile.relativePath;
 
-    let structured = buildWritingFallback(extracted.text);
-    let aiStatus: "SUCCEEDED" | "FAILED" = "FAILED";
-    let aiErrorMessage: string | null = "AI structure generation has not run.";
-
-    try {
-      structured = await structureWritingAssignment(extracted.text);
-      aiStatus = "SUCCEEDED";
-      aiErrorMessage = null;
-    } catch (error) {
-      aiStatus = "FAILED";
-      aiErrorMessage = error instanceof Error ? error.message : "AI structure generation failed.";
-    }
-
-    const questions = flattenWritingQuestions(structured);
-    const title = customTitle ?? structured.title ?? file.name.replace(/\.[^.]+$/, "");
+    const fallbackStructured = buildWritingFallback(extracted.text);
+    const fallbackQuestions = flattenWritingQuestions(fallbackStructured);
+    const title = customTitle ?? fallbackStructured.title ?? file.name.replace(/\.[^.]+$/, "");
 
     const assignment = await prisma.$transaction(async (tx) => {
       const created = await tx.assignment.create({
@@ -150,30 +222,23 @@ export async function POST(request: NextRequest) {
           originalFilePath: savedFile.relativePath,
           originalMimeType: savedFile.mimeType,
           originalContent: extracted.text,
-          aiStructuredContent: structured as unknown as Prisma.InputJsonValue,
-          aiStatus,
-          aiErrorMessage,
+          aiStructuredContent: fallbackStructured as unknown as Prisma.InputJsonValue,
+          aiStatus: "PENDING",
+          aiErrorMessage: null,
           status: AssignmentStatus.PENDING_REVIEW
         }
       });
 
-      if (questions.length > 0) {
+      if (fallbackQuestions.length > 0) {
         await tx.assignmentSection.createMany({
-          data: questions.map((question, index) => ({
-            assignmentId: created.id,
-            sectionTitle: `${question.partTitle} / Question ${question.questionNumber}`,
-            originalText: question.prompt,
-            vietnameseText: null,
-            chineseTranslation: null,
-            detectedLevel: question.detectedLevel,
-            displayType: mapDisplayType(question.displayType),
-            orderIndex: index + 1
-          }))
+          data: buildSectionRows(created.id, fallbackQuestions)
         });
       }
 
       return created;
     });
+
+    after(() => runWritingStructureJob(assignment.id, extracted.text, title));
 
     logAuditEvent({
       event: "assignments.writing.upload",
@@ -186,12 +251,9 @@ export async function POST(request: NextRequest) {
       {
         success: true,
         id: assignment.id,
-        aiStatus,
+        aiStatus: "PENDING",
         sourceStrategy: extracted.strategy,
-        message:
-          aiStatus === "SUCCEEDED"
-            ? "笔头作业已上传并完成按题结构化。"
-            : "作业已上传，但 AI 结构化失败，可稍后重试。"
+        message: "笔头作业已上传，AI 正在后台结构化。"
       },
       201
     );
