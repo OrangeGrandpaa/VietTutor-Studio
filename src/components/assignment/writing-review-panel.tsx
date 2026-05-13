@@ -73,34 +73,34 @@ export function WritingReviewPanel({
             <Progress value={stats.totalQuestions ? (stats.reviewedQuestions / stats.totalQuestions) * 100 : 0} />
           </div>
 
-          <div className="space-y-3">
+          <div className="max-h-[calc(100vh-23rem)] min-h-0 space-y-3 overflow-y-auto pr-2">
             {groups.map((group) => {
               const status = getGroupStatus(group);
 
               return (
-              <Link
-                key={`${group.partIndex}-${group.partTitle}`}
-                href={`#${getWritingPartAnchor(group.partIndex)}`}
-                className={cn(
-                  "block rounded-2xl border p-4 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                  status.className
-                )}
-              >
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <p className="font-medium">{group.partTitle}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {group.reviewedQuestions}/{group.totalQuestions} 题已批阅
-                    </p>
+                <Link
+                  key={`${group.partIndex}-${group.partTitle}`}
+                  href={`#${getWritingPartAnchor(group.partIndex)}`}
+                  className={cn(
+                    "block rounded-2xl border p-4 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                    status.className
+                  )}
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="font-medium">{group.partTitle}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {group.reviewedQuestions}/{group.totalQuestions} 题已批阅
+                      </p>
+                    </div>
+                    <div className="flex flex-col items-end gap-2">
+                      <Badge variant="outline" className={status.badgeClassName}>
+                        {status.label}
+                      </Badge>
+                      <Badge variant="outline">{formatPercent(group.accuracy)}</Badge>
+                    </div>
                   </div>
-                  <div className="flex flex-col items-end gap-2">
-                    <Badge variant="outline" className={status.badgeClassName}>
-                      {status.label}
-                    </Badge>
-                    <Badge variant="outline">{formatPercent(group.accuracy)}</Badge>
-                  </div>
-                </div>
-              </Link>
+                </Link>
               );
             })}
           </div>
