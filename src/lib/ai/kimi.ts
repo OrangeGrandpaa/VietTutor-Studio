@@ -7,7 +7,7 @@ import { writingAssignmentStructurePrompt } from "@/prompts/writing-assignment-s
 import { getEnv } from "@/lib/utils/env";
 import type { SpeakingStructuredContent, WritingStructuredContent } from "@/types/assignment";
 
-const STRUCTURED_OUTPUT_MAX_TOKENS = 8192;
+const DEFAULT_STRUCTURED_OUTPUT_MAX_TOKENS = 8192;
 const KIMI_FILE_EXTRACTION_MAX_POLLS = 10;
 const KIMI_FILE_EXTRACTION_POLL_INTERVAL_MS = 1200;
 
@@ -50,6 +50,13 @@ const speakingSchema = z.object({
     })
   )
 });
+
+function getStructuredOutputMaxTokens() {
+  const configured = Number(process.env.KIMI_MAX_TOKENS ?? DEFAULT_STRUCTURED_OUTPUT_MAX_TOKENS);
+  return Number.isFinite(configured) && configured > 0
+    ? Math.floor(configured)
+    : DEFAULT_STRUCTURED_OUTPUT_MAX_TOKENS;
+}
 
 function getKimiConfig() {
   return {
@@ -206,6 +213,7 @@ export async function extractTextWithKimiFilesApi(file: File) {
 
 export async function callKimiModel(prompt: string, input: string) {
   const { apiKey, baseUrl, model } = getKimiConfig();
+  const maxTokens = getStructuredOutputMaxTokens();
 
   const response = await fetch(`${baseUrl}/chat/completions`, {
     method: "POST",
@@ -215,7 +223,7 @@ export async function callKimiModel(prompt: string, input: string) {
     },
     body: JSON.stringify({
       model,
-      max_tokens: STRUCTURED_OUTPUT_MAX_TOKENS,
+      max_tokens: maxTokens,
       response_format: {
         type: "json_object"
       },
@@ -255,7 +263,7 @@ export async function callKimiModel(prompt: string, input: string) {
 
   if (finishReason === "length") {
     throw new Error(
-      `Kimi API 返回被截断（finish_reason=length）。请缩短输入内容，或进一步增大 max_tokens（当前 ${STRUCTURED_OUTPUT_MAX_TOKENS}）。`
+      `Kimi API 返回被截断（finish_reason=length）。请缩短输入内容，或进一步增大 max_tokens（当前 ${maxTokens}）。`
     );
   }
 

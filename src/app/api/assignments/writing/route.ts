@@ -96,6 +96,10 @@ function buildSectionRows(assignmentId: string, questions: ReturnType<typeof fla
   }));
 }
 
+function isKimiLengthLimitError(error: unknown) {
+  return error instanceof Error && error.message.includes("finish_reason=length");
+}
+
 async function runWritingStructureJob(assignmentId: string, originalContent: string, fallbackTitle: string) {
   try {
     const structured = await structureWritingAssignment(originalContent);
@@ -154,6 +158,22 @@ async function runWritingStructureJob(assignmentId: string, originalContent: str
     logger.info("assignments.writing.structure_job.succeeded", { assignmentId });
   } catch (error) {
     const message = error instanceof Error ? error.message : "AI structure generation failed.";
+
+    if (isKimiLengthLimitError(error)) {
+      await prisma.assignment.update({
+        where: { id: assignmentId },
+        data: {
+          aiStatus: "SUCCEEDED",
+          aiErrorMessage: null
+        }
+      });
+
+      logger.warn("assignments.writing.structure_job.used_fallback_after_length_limit", {
+        assignmentId,
+        message
+      });
+      return;
+    }
 
     await prisma.assignment.update({
       where: { id: assignmentId },
