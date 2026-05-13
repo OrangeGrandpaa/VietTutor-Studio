@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { AssignmentStatusBadge } from "@/components/assignment/assignment-status-badge";
+import { RefreshAssignmentButton } from "@/components/assignment/refresh-assignment-button";
 import { RetryAiButton } from "@/components/assignment/retry-ai-button";
 import { WritingAnswerEditor } from "@/components/assignment/writing-answer-editor";
 import { WritingQuestionReviewControls } from "@/components/assignment/writing-question-review-controls";
@@ -68,6 +69,20 @@ export default async function WritingAssignmentDetailPage({
           <Badge variant="outline">已批阅 {stats.reviewedQuestions}</Badge>
           <Badge variant="outline">整体准确率 {formatPercent(stats.accuracy)}</Badge>
         </div>
+
+        {assignment.aiStatus === "PENDING" ? (
+          <Card className="border-sky-300/70 bg-sky-50/70">
+            <CardHeader>
+              <CardTitle>AI 正在后台结构化</CardTitle>
+            </CardHeader>
+            <CardContent className="flex flex-wrap items-center justify-between gap-4">
+              <p className="max-w-2xl text-sm leading-6 text-foreground/80">
+                当前先展示基础拆分结果。AI 完成后，点击刷新状态即可看到更新后的题目结构。
+              </p>
+              <RefreshAssignmentButton />
+            </CardContent>
+          </Card>
+        ) : null}
 
         {assignment.aiStatus === "FAILED" && assignment.aiErrorMessage ? (
           <Card className="border-amber-300/70 bg-amber-50/70">
