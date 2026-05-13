@@ -5,7 +5,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
+import { AutoResizeTextarea } from "@/components/ui/auto-resize-textarea";
 import { cn } from "@/lib/utils/cn";
 
 export function WritingQuestionReviewControls({
@@ -54,8 +54,7 @@ export function WritingQuestionReviewControls({
 
   return (
     <div className="mt-4 space-y-3">
-      <Textarea
-        className="min-h-[96px]"
+      <AutoResizeTextarea
         placeholder="输入批注"
         value={note}
         onChange={(event) => setNote(event.target.value)}

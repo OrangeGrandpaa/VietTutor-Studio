@@ -4,8 +4,7 @@ import { notFound } from "next/navigation";
 import { AssignmentStatusBadge } from "@/components/assignment/assignment-status-badge";
 import { RefreshAssignmentButton } from "@/components/assignment/refresh-assignment-button";
 import { RetryAiButton } from "@/components/assignment/retry-ai-button";
-import { WritingAnswerEditor } from "@/components/assignment/writing-answer-editor";
-import { WritingQuestionReviewControls } from "@/components/assignment/writing-question-review-controls";
+import { WritingQuestionGroups } from "@/components/assignment/writing-question-groups";
 import { WritingReviewPanel } from "@/components/assignment/writing-review-panel";
 import { AppShell } from "@/components/layout/app-shell";
 import { PageShell } from "@/components/layout/page-shell";
@@ -115,75 +114,7 @@ export default async function WritingAssignmentDetailPage({
               </CardContent>
             </Card>
 
-            {groups.map((group) => (
-              <Card key={`${group.partIndex}-${group.partTitle}`}>
-                <CardHeader>
-                  <div className="flex flex-wrap items-center justify-between gap-3">
-                    <div>
-                      <CardTitle>{group.partTitle}</CardTitle>
-                      {group.instruction ? (
-                        <p className="mt-2 text-sm text-muted-foreground">{group.instruction}</p>
-                      ) : null}
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      <Badge variant="outline">{group.totalQuestions} 题</Badge>
-                      <Badge variant="outline">准确率 {formatPercent(group.accuracy)}</Badge>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {group.questions.map((question) => (
-                    <div key={question.id} className="rounded-[1.5rem] border border-border/70 p-5">
-                      <div className="mb-3 flex flex-wrap items-center gap-2">
-                        <Badge variant="outline">第 {question.questionNumber} 题</Badge>
-                        <Badge
-                          variant={
-                            question.isCorrect === true
-                              ? "success"
-                              : question.isCorrect === false
-                                ? "destructive"
-                                : "warning"
-                          }
-                        >
-                          {question.isCorrect === true
-                            ? "正确"
-                            : question.isCorrect === false
-                              ? "错误"
-                              : "待批阅"}
-                        </Badge>
-                        {question.detectedLevel ? <Badge variant="outline">{question.detectedLevel}</Badge> : null}
-                      </div>
-
-                      <div className="space-y-3">
-                        <div>
-                          <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">题目内容</p>
-                          <p className="mt-2 whitespace-pre-wrap text-xl font-medium leading-8">{question.prompt}</p>
-                        </div>
-
-                        <div className="rounded-xl bg-secondary/40 p-4">
-                          <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">学生答案</p>
-                          <WritingAnswerEditor
-                            assignmentId={assignment.id}
-                            sectionId={question.id}
-                            initialAnswer={question.answer ?? ""}
-                          />
-                        </div>
-
-                        <div className="rounded-xl border border-border/70 bg-card/70 p-4">
-                          <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">题目批阅</p>
-                          <WritingQuestionReviewControls
-                            assignmentId={assignment.id}
-                            sectionId={question.id}
-                            isCorrect={question.isCorrect}
-                            initialNote={question.note}
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </CardContent>
-              </Card>
-            ))}
+            <WritingQuestionGroups assignmentId={assignment.id} groups={groups} />
           </div>
 
           <WritingReviewPanel groups={groups} stats={stats} />

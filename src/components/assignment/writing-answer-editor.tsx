@@ -5,7 +5,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
+import { AutoResizeTextarea } from "@/components/ui/auto-resize-textarea";
 
 export function WritingAnswerEditor({
   assignmentId,
@@ -51,8 +51,7 @@ export function WritingAnswerEditor({
 
   return (
     <div className="mt-3 space-y-3">
-      <Textarea
-        className="min-h-[128px]"
+      <AutoResizeTextarea
         placeholder="在这里输入学生答案"
         value={answer}
         onChange={(event) => setAnswer(event.target.value)}

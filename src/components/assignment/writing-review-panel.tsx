@@ -1,10 +1,38 @@
 "use client";
 
+import Link from "next/link";
+
+import { getWritingPartAnchor } from "@/components/assignment/writing-question-groups";
 import type { WritingPartReviewGroup, WritingReviewStats } from "@/lib/assignment/writing";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
+import { cn } from "@/lib/utils/cn";
 import { formatPercent } from "@/lib/utils/format";
+
+function getGroupStatus(group: WritingPartReviewGroup) {
+  if (group.totalQuestions > 0 && group.reviewedQuestions >= group.totalQuestions) {
+    return {
+      label: "已批完",
+      className: "border-emerald-200 bg-emerald-50 text-emerald-900 hover:bg-emerald-100",
+      badgeClassName: "border-emerald-300 bg-emerald-100 text-emerald-800"
+    };
+  }
+
+  if (group.reviewedQuestions > 0) {
+    return {
+      label: "批阅中",
+      className: "border-amber-200 bg-amber-50 text-amber-950 hover:bg-amber-100",
+      badgeClassName: "border-amber-300 bg-amber-100 text-amber-800"
+    };
+  }
+
+  return {
+    label: "未批阅",
+    className: "border-red-200 bg-red-50 text-red-950 hover:bg-red-100",
+    badgeClassName: "border-red-300 bg-red-100 text-red-800"
+  };
+}
 
 export function WritingReviewPanel({
   groups,
@@ -46,8 +74,18 @@ export function WritingReviewPanel({
           </div>
 
           <div className="space-y-3">
-            {groups.map((group) => (
-              <div key={group.partTitle} className="rounded-2xl border border-border/70 p-4">
+            {groups.map((group) => {
+              const status = getGroupStatus(group);
+
+              return (
+              <Link
+                key={`${group.partIndex}-${group.partTitle}`}
+                href={`#${getWritingPartAnchor(group.partIndex)}`}
+                className={cn(
+                  "block rounded-2xl border p-4 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                  status.className
+                )}
+              >
                 <div className="flex items-center justify-between gap-3">
                   <div>
                     <p className="font-medium">{group.partTitle}</p>
@@ -55,10 +93,16 @@ export function WritingReviewPanel({
                       {group.reviewedQuestions}/{group.totalQuestions} 题已批阅
                     </p>
                   </div>
-                  <Badge variant="outline">{formatPercent(group.accuracy)}</Badge>
+                  <div className="flex flex-col items-end gap-2">
+                    <Badge variant="outline" className={status.badgeClassName}>
+                      {status.label}
+                    </Badge>
+                    <Badge variant="outline">{formatPercent(group.accuracy)}</Badge>
+                  </div>
                 </div>
-              </div>
-            ))}
+              </Link>
+              );
+            })}
           </div>
         </CardContent>
       </Card>
