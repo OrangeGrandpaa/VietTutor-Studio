@@ -12,6 +12,11 @@ import { Label } from "@/components/ui/label";
 const assignmentFileAccept =
   ".md,.markdown,.txt,.doc,.docx,.pdf,.ppt,.pptx,.xls,.xlsx,.csv,.html,.htm,.json,.xml,.log,text/markdown,text/plain,text/csv,text/html,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/pdf,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/json,application/xml,text/xml";
 
+type WritingUploadResponse = {
+  id?: string;
+  message?: string;
+};
+
 export function WritingUploadForm() {
   const router = useRouter();
   const [title, setTitle] = useState("");
@@ -23,7 +28,7 @@ export function WritingUploadForm() {
       <CardHeader>
         <CardTitle>上传笔头作业</CardTitle>
         <CardDescription>
-          Markdown、DOC、DOCX 会直接读文本后一次请求调用 Kimi；PDF、PPT、Excel 等复杂文档会自动走 Kimi Files API。
+          支持 Markdown、Word、PDF、PPT、Excel、CSV、HTML、JSON、XML 等常见文件格式。
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -47,12 +52,18 @@ export function WritingUploadForm() {
                 method: "POST",
                 body: formData
               });
-              const payload = (await response.json().catch(() => null)) as
-                | { id?: string; message?: string }
-                | null;
+
+              const responseText = await response.text();
+              let payload: WritingUploadResponse | null = null;
+
+              try {
+                payload = responseText ? (JSON.parse(responseText) as WritingUploadResponse) : null;
+              } catch {
+                payload = null;
+              }
 
               if (!response.ok || !payload?.id) {
-                throw new Error(payload?.message ?? "上传失败。");
+                throw new Error(payload?.message ?? (responseText || "上传失败。"));
               }
 
               toast.success(payload.message ?? "上传成功。");
