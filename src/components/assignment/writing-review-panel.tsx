@@ -13,24 +13,18 @@ import { formatPercent } from "@/lib/utils/format";
 function getGroupStatus(group: WritingPartReviewGroup) {
   if (group.totalQuestions > 0 && group.reviewedQuestions >= group.totalQuestions) {
     return {
-      label: "已批完",
-      className: "border-emerald-200 bg-emerald-50 text-emerald-900 hover:bg-emerald-100",
-      badgeClassName: "border-emerald-300 bg-emerald-100 text-emerald-800"
+      className: "border-emerald-200 bg-emerald-50 text-emerald-900 hover:bg-emerald-100"
     };
   }
 
   if (group.reviewedQuestions > 0) {
     return {
-      label: "批阅中",
-      className: "border-amber-200 bg-amber-50 text-amber-950 hover:bg-amber-100",
-      badgeClassName: "border-amber-300 bg-amber-100 text-amber-800"
+      className: "border-amber-200 bg-amber-50 text-amber-950 hover:bg-amber-100"
     };
   }
 
   return {
-    label: "未批阅",
-    className: "border-red-200 bg-red-50 text-red-950 hover:bg-red-100",
-    badgeClassName: "border-red-300 bg-red-100 text-red-800"
+    className: "border-red-200 bg-red-50 text-red-950 hover:bg-red-100"
   };
 }
 
@@ -94,9 +88,6 @@ export function WritingReviewPanel({
                       </p>
                     </div>
                     <div className="flex flex-col items-end gap-2">
-                      <Badge variant="outline" className={status.badgeClassName}>
-                        {status.label}
-                      </Badge>
                       <Badge variant="outline">{formatPercent(group.accuracy)}</Badge>
                     </div>
                   </div>
