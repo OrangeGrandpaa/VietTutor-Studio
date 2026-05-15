@@ -52,6 +52,7 @@ export function WritingAnswerEditor({
   return (
     <div className="mt-3 space-y-3">
       <AutoResizeTextarea
+        className="text-lg font-semibold leading-7"
         placeholder="在这里输入学生答案"
         value={answer}
         onChange={(event) => setAnswer(event.target.value)}

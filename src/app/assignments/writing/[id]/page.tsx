@@ -94,7 +94,7 @@ export default async function WritingAssignmentDetailPage({
           </Card>
         ) : null}
 
-        <div className="grid gap-6 xl:grid-cols-[1.05fr_0.95fr]">
+        <div className="grid gap-6 xl:grid-cols-[1.35fr_0.65fr]">
           <div className="space-y-6">
             <Card>
               <CardHeader>
