@@ -1,41 +1,53 @@
-# VietTutor Studio 阿里云部署说明
+# VietTutor Studio Alibaba Cloud Deployment
 
-本文按 `Ubuntu + Nginx + PM2 + Next.js + SQLite` 方式部署。
+This document describes the current recommended deployment path for Alibaba Cloud ECS:
 
-如果你的 ECS 是中国内地地域，并且你要绑定自己的域名，请先确认域名已经完成 ICP 备案；否则域名解析到中国内地服务器后，网站无法合规提供服务。
+- Alibaba Cloud Linux 3
+- Nginx
+- systemd
+- Next.js
+- Prisma + SQLite
+- Local `uploads/` storage
 
-## 1. 服务器准备
+For the already-running production server, read `PRODUCTION_STATUS.md` first. This file is for rebuilding or reproducing the deployment.
 
-建议配置：
+## 1. Server Prerequisites
 
-- Ubuntu 22.04 LTS
-- 2 vCPU / 2 GB RAM 起步
-- 已分配公网 IP
-- 已放通安全组端口：`22`、`80`、`443`
+Recommended minimum:
 
-## 2. 登录服务器
+- Alibaba Cloud Linux 3
+- 2 vCPU / 2 GB RAM or higher
+- Public IP assigned
+- Security group inbound rules open for `22`, `80`, and `443`
+- ICP filing completed if the ECS is in mainland China and a custom domain is used
+
+The current production domains are:
+
+- `vietkiet.cn`
+- `www.vietkiet.cn`
+
+## 2. Install Runtime Packages
+
+Log in to the server:
 
 ```bash
-ssh root@你的服务器公网IP
+ssh root@your-server-ip
 ```
 
-如果你使用普通用户，请把下文里的 `root` 替换成你的用户名。
-
-## 3. 安装基础环境
+Install the base packages:
 
 ```bash
-apt update
-apt install -y nginx git curl
-curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
-apt install -y nodejs
-npm install -g pm2
+dnf install -y nginx git curl
+curl -fsSL https://rpm.nodesource.com/setup_20.x | bash -
+dnf install -y nodejs
 node -v
 npm -v
+nginx -v
 ```
 
-建议使用 Node.js 20 LTS。
+Node.js 20 LTS is preferred. Newer versions may work, but if native dependencies behave oddly, use Node.js 20.
 
-## 4. 拉取项目
+## 3. Clone the Repository
 
 ```bash
 mkdir -p /var/www
@@ -44,215 +56,238 @@ git clone https://github.com/OrangeGrandpaa/VietTutor-Studio.git
 cd VietTutor-Studio
 ```
 
-## 5. 配置环境变量
-
-先复制模板：
+## 4. Configure Environment Variables
 
 ```bash
 cp .env.example .env
+vi .env
 ```
 
-然后编辑：
-
-```bash
-nano .env
-```
-
-至少要配置这些值：
+Required or commonly used values:
 
 ```env
 DATABASE_URL="file:./dev.db"
-SITE_ACCESS_PASSWORD="改成你自己的访问密码"
-SESSION_SECRET="改成长随机字符串"
+SITE_ACCESS_PASSWORD="change-this-password"
+SESSION_SECRET="replace-with-a-long-random-secret"
 SESSION_MAX_AGE_DAYS="14"
-KIMI_API_KEY="如果要用 Kimi 就填写"
+KIMI_API_KEY=""
 KIMI_BASE_URL="https://api.moonshot.ai/v1"
 KIMI_MODEL="moonshot-v1-8k"
+KIMI_MAX_TOKENS="8192"
 MAX_UPLOAD_SIZE_MB="20"
 ```
 
-注意：
-
-- `DATABASE_URL="file:./dev.db"` 会让 SQLite 数据库文件落在 `prisma/dev.db`。
-- `SITE_ACCESS_PASSWORD` 是网站登录口令。
-- `SESSION_SECRET` 必须是高强度随机字符串。
-
-可用下面命令生成 `SESSION_SECRET`：
+Generate a strong session secret:
 
 ```bash
 openssl rand -base64 32
 ```
 
-## 6. 安装依赖并初始化数据目录
+Notes:
+
+- `.env` is server-local and should not be committed.
+- `DATABASE_URL="file:./dev.db"` stores SQLite at `prisma/dev.db`.
+- `KIMI_MAX_TOKENS` controls the Kimi structured-output token budget. Production may set this higher, for example `16384`, if the selected model supports it.
+
+## 5. Install Dependencies and Initialize Data
 
 ```bash
 npm ci
 npm run db:init
 ```
 
-这一步会做三件事：
+This generates Prisma Client, syncs the SQLite schema, and prepares local upload storage.
 
-- 生成 Prisma Client
-- 根据 `schema.prisma` 初始化 SQLite 表结构
-- 创建 `uploads` 目录
-
-## 7. 构建生产版本
+## 6. Build the App
 
 ```bash
 npm run build
 ```
 
-## 8. 用 PM2 启动服务
+## 7. Configure systemd
 
-仓库根目录已经提供 `ecosystem.config.cjs`，直接启动：
+Create `/etc/systemd/system/vietutor-studio.service`:
 
-```bash
-pm2 start ecosystem.config.cjs
-pm2 save
-pm2 startup
+```ini
+[Unit]
+Description=VietTutor Studio
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/var/www/VietTutor-Studio
+Environment=NODE_ENV=production
+Environment=PORT=3000
+ExecStart=/usr/bin/node /var/www/VietTutor-Studio/node_modules/next/dist/bin/next start -p 3000
+Restart=always
+RestartSec=5
+User=root
+
+[Install]
+WantedBy=multi-user.target
 ```
 
-确认服务状态：
+Enable and start it:
 
 ```bash
-pm2 status
-pm2 logs vietutor-studio --lines 100
+systemctl daemon-reload
+systemctl enable --now vietutor-studio
+systemctl status vietutor-studio --no-pager
+curl -I http://127.0.0.1:3000
 ```
 
-默认应用监听 `3000` 端口。
+Expected response is usually `200`, `302`, or `307` depending on auth redirects.
 
-## 9. 配置 Nginx 反向代理
+## 8. Configure Nginx
 
-创建站点配置：
+Create `/etc/nginx/conf.d/viettutor.conf`.
 
-```bash
-nano /etc/nginx/sites-available/vietutor-studio
-```
-
-填入：
+HTTP should redirect to HTTPS:
 
 ```nginx
 server {
     listen 80;
-    server_name 你的域名 或 服务器公网IP;
+    server_name vietkiet.cn www.vietkiet.cn;
+
+    location ^~ /.well-known/acme-challenge/ {
+        root /var/www/certbot;
+        default_type "text/plain";
+        try_files $uri =404;
+    }
+
+    location / {
+        return 301 https://$host$request_uri;
+    }
+}
+```
+
+HTTPS should proxy to the local Next.js app:
+
+```nginx
+server {
+    listen 443 ssl http2;
+    server_name vietkiet.cn www.vietkiet.cn;
+
+    ssl_certificate /etc/nginx/ssl/vietkiet.cn/fullchain.pem;
+    ssl_certificate_key /etc/nginx/ssl/vietkiet.cn/privkey.pem;
 
     client_max_body_size 25m;
 
     location / {
         proxy_pass http://127.0.0.1:3000;
         proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection "upgrade";
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_connect_timeout 300s;
+        proxy_send_timeout 300s;
+        proxy_read_timeout 300s;
+        send_timeout 300s;
+        client_body_timeout 300s;
     }
 }
 ```
 
-启用配置：
+Apply the config:
 
 ```bash
-ln -s /etc/nginx/sites-available/vietutor-studio /etc/nginx/sites-enabled/
 nginx -t
-systemctl restart nginx
+systemctl reload nginx
 ```
 
-## 10. 安全组与防火墙检查
+## 9. HTTPS Certificate
 
-阿里云安全组至少放通：
+The current production server uses a manually downloaded Alibaba Cloud Nginx certificate.
 
-- `22`：SSH
-- `80`：HTTP
-- `443`：HTTPS
-
-如果你临时要直接访问 Node 服务，也可以短暂放通 `3000`，但生产环境建议只开放 `80/443`，由 Nginx 对外提供访问。
-
-## 11. 绑定域名
-
-在域名服务商控制台添加解析：
-
-- 记录类型：`A`
-- 主机记录：`@` 或 `www`
-- 记录值：你的 ECS 公网 IP
-
-解析生效后，用域名访问网站。
-
-## 12. 配置 HTTPS
-
-如果域名已备案并解析成功，可以安装证书。常见方案是 `Let's Encrypt`。
+Expected paths:
 
 ```bash
-apt install -y certbot python3-certbot-nginx
-certbot --nginx -d 你的域名
+/etc/nginx/ssl/vietkiet.cn/fullchain.pem
+/etc/nginx/ssl/vietkiet.cn/privkey.pem
 ```
 
-完成后，`Nginx` 会自动更新为 HTTPS 配置。
+The certificate should cover both:
 
-## 13. 后续更新
+- `vietkiet.cn`
+- `www.vietkiet.cn`
 
-以后每次发版：
+After replacing a certificate:
+
+```bash
+nginx -t
+systemctl reload nginx
+```
+
+## 10. Release Flow
+
+For normal releases:
 
 ```bash
 cd /var/www/VietTutor-Studio
-git pull
-npm ci
-npm run build
-pm2 restart vietutor-studio
+bash scripts/deploy.sh
 ```
 
-如果 `prisma/schema.prisma` 有变更，再补一次：
+If `prisma/schema.prisma` changed:
 
 ```bash
-npm run db:push
+cd /var/www/VietTutor-Studio
+bash scripts/deploy.sh --with-db-push
 ```
 
-## 14. 数据备份
+The script runs `git pull`, `npm ci`, `npm run build`, and restarts `vietutor-studio`.
 
-这个项目当前使用 SQLite，本机重要数据主要有两部分：
-
-- `prisma/dev.db`
-- `uploads/`
-
-建议定期备份：
+## 11. Verification
 
 ```bash
-tar -czf /root/vietutor-backup-$(date +%F).tar.gz prisma/dev.db uploads
+systemctl status vietutor-studio --no-pager
+curl -I http://127.0.0.1:3000
+curl -I https://vietkiet.cn
+curl -I https://www.vietkiet.cn
+curl -I https://vietkiet.cn/api/health
 ```
 
-## 15. 常见问题
+## 12. Backups
 
-### 网站打不开
-
-按顺序检查：
+At minimum, back up:
 
 ```bash
-pm2 status
-pm2 logs vietutor-studio --lines 100
-nginx -t
-systemctl status nginx
+/var/www/VietTutor-Studio/prisma/dev.db
+/var/www/VietTutor-Studio/uploads
+/etc/nginx/conf.d/viettutor.conf
+/etc/nginx/ssl/vietkiet.cn
+```
+
+Example:
+
+```bash
+tar -czf /root/vietutor-backup-$(date +%F).tar.gz \
+  /var/www/VietTutor-Studio/prisma/dev.db \
+  /var/www/VietTutor-Studio/uploads \
+  /etc/nginx/conf.d/viettutor.conf \
+  /etc/nginx/ssl/vietkiet.cn
+```
+
+## 13. Troubleshooting
+
+Check the app:
+
+```bash
+systemctl status vietutor-studio --no-pager
+journalctl -u vietutor-studio -n 100 --no-pager
 ss -tlnp | grep 3000
 ```
 
-### 修改了 `.env` 但没生效
+Check Nginx:
 
 ```bash
-pm2 restart vietutor-studio --update-env
+nginx -t
+systemctl status nginx --no-pager
+tail -n 100 /var/log/nginx/error.log
 ```
 
-### 上传失败
+If upload requests return `504`, confirm `proxy_read_timeout` is high enough. Writing uploads now return quickly and run AI structuring in the background, but large PDF/PPT/Excel extraction can still take longer than simple text uploads.
 
-检查：
-
-- `uploads` 目录是否存在
-- `client_max_body_size` 是否足够
-- `.env` 中的 `MAX_UPLOAD_SIZE_MB` 是否合理
-
-### Kimi 功能失败
-
-检查：
-
-- `KIMI_API_KEY` 是否正确
-- 服务器是否能访问外部 API
-
+If Kimi structuring reports `finish_reason=length`, either increase `KIMI_MAX_TOKENS` in the server `.env` if the model supports it, or rely on the fallback structure retained by the app.

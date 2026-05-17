@@ -1,92 +1,113 @@
 # Production Status
 
-Last updated: 2026-05-07
+Last updated: 2026-05-18
 
-This file is a handoff summary of the current deployment state for this project.
-Use it together with `DEPLOY_ALIYUN.md` and `CHANGELOG.md`:
+This file records the current real-world production state for VietTutor Studio. Use it with:
 
-- `DEPLOY_ALIYUN.md`: generic deployment procedure
-- `PRODUCTION_STATUS.md`: current real-world server state and operational notes
-- `CHANGELOG.md`: version-by-version change history
+- `CHANGELOG.md`: version-by-version project changes.
+- `DEPLOY_ALIYUN.md`: repeatable Alibaba Cloud deployment procedure.
+- `PRODUCTION_STATUS.md`: current server facts, operational notes, and known pitfalls.
 
-## Current production URLs
+## Current Production URLs
 
-- https://vietkiet.cn
-- https://www.vietkiet.cn
+- `https://vietkiet.cn`
+- `https://www.vietkiet.cn`
 
-Current expected behavior:
+Expected behavior:
 
-- Both URLs respond over HTTPS
-- Requests redirect to `/login` when unauthenticated
-- The `/login` redirect is expected application behavior, not a deployment error
+- HTTPS is enabled for both domains.
+- Unauthenticated page requests redirect to `/login`.
+- `https://vietkiet.cn/api/health` should return HTTP `200`.
 
-## Production server
+## Server Snapshot
 
-- Provider: Alibaba Cloud ECS
-- OS: Alibaba Cloud Linux 3
-- App directory: `/var/www/VietTutor-Studio`
-- App runtime: Next.js 15
-- Process manager in production: `systemd`
-- Active service name: `vietutor-studio`
-- Listening port: `3000`
-- Reverse proxy: `Nginx`
+- Provider: Alibaba Cloud ECS.
+- OS: Alibaba Cloud Linux 3.
+- App directory: `/var/www/VietTutor-Studio`.
+- Runtime: Next.js 15 on Node.js.
+- Process manager: `systemd`.
+- Active service: `vietutor-studio`.
+- App port: `3000`.
+- Reverse proxy: Nginx.
+- Active Nginx config: `/etc/nginx/conf.d/viettutor.conf`.
 
-Important:
+Production does not use PM2. PM2 was attempted earlier, but the final stable setup uses `systemd`.
 
-- Production does **not** use PM2
-- `ecosystem.config.cjs` exists in the repo, but the final production setup switched to `systemd`
+## Repository State
 
-## Data and storage
+Latest repository commit documented by this status file:
 
-- Database: SQLite
-- SQLite file: `/var/www/VietTutor-Studio/prisma/dev.db`
-- Upload directory: `/var/www/VietTutor-Studio/uploads`
+- `e8a2549` - `Remove writing review status badges`
 
-These paths contain production data and should be backed up before risky changes.
+Do not assume the server is on this exact commit without checking it directly:
 
-## Environment and build status
+```bash
+cd /var/www/VietTutor-Studio
+git rev-parse --short HEAD
+git log --oneline -n 3
+```
 
-The following were completed successfully on the server:
+## Data And Storage
 
-- `npm ci`
-- `npm run db:init`
-- `npm run build`
+- Database: SQLite.
+- SQLite file: `/var/www/VietTutor-Studio/prisma/dev.db`.
+- Upload directory: `/var/www/VietTutor-Studio/uploads`.
+- Environment file: `/var/www/VietTutor-Studio/.env`.
 
-The application was verified locally on the server with:
+Back up `prisma/dev.db` and `uploads` before risky deployments or schema changes.
 
-- `curl -I http://127.0.0.1:3000`
-- `curl -I https://vietkiet.cn`
-- `curl -I https://www.vietkiet.cn`
+## Current Application Behavior
 
-## Latest deployed release
+Writing assignment upload:
 
-Latest confirmed deployed commit:
+- Uploads should return quickly and enter the assignment detail page.
+- Kimi document structuring runs after upload.
+- While structuring is still pending, the detail page shows a pending notice and a manual refresh button.
+- Automatic polling is intentionally not enabled.
+- If Kimi returns `finish_reason=length`, the app accepts the fallback structure and records the truncation note instead of blocking the upload.
 
-- `696d9f8` - `Simplify schema and document production deployment`
+Writing assignment detail page:
 
-This release included:
+- Answer and review textareas start at one-line height and grow with entered content.
+- Student answer text is larger and bold.
+- The right-side overall review panel is narrower than before and scrolls internally when content is long.
+- Overall review cards can jump to the corresponding assignment section.
+- Section state is color-coded: pending/incomplete states are visually distinct from completed states.
+- The explicit `未批阅` status badge was removed from the overall review cards.
+- A `只看错题` toggle is available.
 
-- Added deployment and handoff documents:
-  - `DEPLOY_ALIYUN.md`
-  - `PRODUCTION_STATUS.md`
-  - `scripts/deploy.sh`
-- Simplified Prisma schema by removing currently unused fields from:
-  - `Assignment`
-  - `TeacherFeedback`
-  - `SpeakingFeedback`
-  - `CourseMaterial`
-- Removed matching dead prompt output fields, API parameters, dashboard references, and page display hooks
-- Synced the production deployment flow with the requirement that schema-changing releases must run `npm run db:push`
+AI configuration:
 
-Important release note:
+- `KIMI_MAX_TOKENS` is configurable in the server `.env`.
+- The user intended to set production to `KIMI_MAX_TOKENS="16384"` after seeing length-limited Kimi responses.
+- `.env` is server-local and is not committed to Git.
 
-- This release was not only a UI/code cleanup; it changed database structure and therefore required `npm run db:push` during deployment
+## HTTPS Certificate
 
-## systemd service
+HTTPS uses manually deployed Alibaba Cloud personal test certificates.
 
-Production is managed by `systemd`.
+Certificate coverage:
 
-Useful commands:
+- `vietkiet.cn`
+- `www.vietkiet.cn`
+
+Server paths:
+
+- Certificate: `/etc/nginx/ssl/vietkiet.cn/fullchain.pem`
+- Private key: `/etc/nginx/ssl/vietkiet.cn/privkey.pem`
+
+Certificate replacement procedure:
+
+```bash
+nginx -t
+systemctl reload nginx
+```
+
+The free personal test certificate is short-lived. Replace it before expiry.
+
+## Service Commands
+
+Application service:
 
 ```bash
 systemctl status vietutor-studio --no-pager
@@ -94,18 +115,7 @@ systemctl restart vietutor-studio
 journalctl -u vietutor-studio -n 100 --no-pager
 ```
 
-## Nginx
-
-Active Nginx site config:
-
-- `/etc/nginx/conf.d/viettutor.conf`
-
-Behavior:
-
-- HTTP on port `80` redirects to HTTPS
-- HTTPS on port `443` proxies to `http://127.0.0.1:3000`
-
-Useful commands:
+Nginx:
 
 ```bash
 nginx -t
@@ -113,92 +123,61 @@ systemctl reload nginx
 systemctl status nginx --no-pager
 ```
 
-## TLS certificate
-
-HTTPS was deployed manually with an Alibaba Cloud certificate.
-
-Certificate coverage:
-
-- `vietkiet.cn`
-- `www.vietkiet.cn`
-
-Deployed certificate paths on the server:
-
-- `/etc/nginx/ssl/vietkiet.cn/fullchain.pem`
-- `/etc/nginx/ssl/vietkiet.cn/privkey.pem`
-
-Notes:
-
-- Manual server-side deployment was used instead of Alibaba Cloud platform auto-deployment
-- The free Alibaba Cloud personal test certificate is short-lived and needs manual replacement before expiry
-
-Certificate reload procedure after replacement:
+Health checks:
 
 ```bash
-nginx -t
-systemctl reload nginx
+curl -I http://127.0.0.1:3000
+curl -I https://vietkiet.cn/api/health
+curl -I https://www.vietkiet.cn
 ```
 
-## Known deployment history / pitfalls
+## Release Flow
 
-These issues were already encountered during setup:
-
-1. PM2 was attempted first, but the environment left behind child `next-server` processes and repeatedly caused `EADDRINUSE` on port `3000`.
-2. An older service named `viettutor.service` existed on the server and interfered with startup by relaunching `npm run start`.
-3. Final production management was changed to `systemd` service `vietutor-studio`.
-4. `certbot` HTTP validation paths were unreliable in this environment, so the final HTTPS setup used Alibaba Cloud certificates and manual deployment.
-
-If port `3000` unexpectedly appears occupied in future debugging, first check for stray old services before changing app code.
-
-## Recommended release flow
-
-For normal application updates:
+Normal update:
 
 ```bash
 cd /var/www/VietTutor-Studio
-git pull
-npm ci
-npm run build
-systemctl restart vietutor-studio
-systemctl status vietutor-studio --no-pager
-```
-
-If Prisma schema changes were made:
-
-```bash
-npm run db:push
-```
-
-Repository helper script:
-
-```bash
 bash scripts/deploy.sh
 ```
 
-If the release includes Prisma schema changes:
+Update with Prisma schema changes:
 
 ```bash
+cd /var/www/VietTutor-Studio
 bash scripts/deploy.sh --with-db-push
 ```
 
-## Recommended backup scope
+The script installs dependencies from `package-lock.json`, builds the app, and restarts `vietutor-studio`.
 
-Before risky changes, at minimum back up:
+## Known Pitfalls
 
-- `/var/www/VietTutor-Studio/prisma/dev.db`
-- `/var/www/VietTutor-Studio/uploads`
-- `/etc/nginx/conf.d/viettutor.conf`
-- `/etc/nginx/ssl/vietkiet.cn/`
+- PM2 should not be reintroduced unless there is a deliberate migration plan.
+- An old service named `viettutor.service` previously relaunched `npm run start` and caused port `3000` conflicts.
+- `certbot` validation was unreliable in this environment; the stable HTTPS path is manual Alibaba Cloud certificate deployment.
+- Nginx `504 Gateway Time-out` during writing upload usually means the upstream Next.js request exceeded proxy timeout, often because AI structuring was blocking the response.
+- Browser-side `Failed to find Server Action` logs can occur after deployments when an old page submits against a newer build; refreshing the browser usually clears it.
+- `KIMI_MAX_TOKENS` changes require editing the server `.env` and restarting `vietutor-studio`.
 
-## Quick handoff checklist
+## Verification
 
-If another agent or engineer takes over, these are the minimum facts they need:
+Local development checks used in this project:
 
-- Production is already live at `vietkiet.cn` and `www.vietkiet.cn`
-- The server OS is Alibaba Cloud Linux 3
-- The app runs from `/var/www/VietTutor-Studio`
-- The active process manager is `systemd`, not PM2
-- The active service name is `vietutor-studio`
-- The active Nginx config is `/etc/nginx/conf.d/viettutor.conf`
-- HTTPS is already working
-- Production data lives in SQLite plus `uploads`
+```bash
+npm run test
+npm run build
+```
+
+Known non-blocking build warning:
+
+- `src/app/materials/[id]/page.tsx` uses `<img>` and Next.js suggests `next/image`.
+
+## Handoff Checklist
+
+For another agent or engineer taking over:
+
+- Start by reading `CHANGELOG.md`, `DEPLOY_ALIYUN.md`, and this file.
+- Check local Git status before editing because `.env.example` may have uncommitted local environment-example changes.
+- On the server, verify the active commit before assuming production matches GitHub `main`.
+- Treat `/var/www/VietTutor-Studio/.env`, `prisma/dev.db`, and `uploads` as server-local operational state.
+- Use `bash scripts/deploy.sh` for code-only releases.
+- Use `bash scripts/deploy.sh --with-db-push` only when Prisma schema changes are included.
