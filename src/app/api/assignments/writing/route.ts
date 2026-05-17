@@ -12,6 +12,7 @@ import { logAuditEvent } from "@/lib/audit/log";
 import { ensureAuthenticatedApi } from "@/lib/auth/session";
 import { prisma } from "@/lib/db/prisma";
 import { deleteFile, saveUploadedFile, StorageValidationError } from "@/lib/storage";
+import { formatErrorForDisplay } from "@/lib/utils/error";
 import { jsonError, jsonOk } from "@/lib/utils/http";
 import { logger } from "@/lib/utils/logger";
 import { mapDisplayType } from "@/lib/utils/mapping";
@@ -157,7 +158,7 @@ async function runWritingStructureJob(assignmentId: string, originalContent: str
 
     logger.info("assignments.writing.structure_job.succeeded", { assignmentId });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "AI structure generation failed.";
+    const message = formatErrorForDisplay(error);
 
     if (isKimiLengthLimitError(error)) {
       await prisma.assignment.update({

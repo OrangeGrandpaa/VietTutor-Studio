@@ -1,11 +1,8 @@
 "use client";
 
-import { useState } from "react";
-
 import { WritingAnswerEditor } from "@/components/assignment/writing-answer-editor";
 import { WritingQuestionReviewControls } from "@/components/assignment/writing-question-review-controls";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { WritingPartReviewGroup } from "@/lib/assignment/writing";
 import { formatPercent } from "@/lib/utils/format";
@@ -16,17 +13,13 @@ export function getWritingPartAnchor(partIndex: number) {
 
 export function WritingQuestionGroups({
   assignmentId,
-  groups
+  groups,
+  wrongOnly = false
 }: {
   assignmentId: string;
   groups: WritingPartReviewGroup[];
+  wrongOnly?: boolean;
 }) {
-  const [wrongOnly, setWrongOnly] = useState(false);
-  const wrongQuestionCount = groups.reduce(
-    (total, group) => total + group.questions.filter((question) => question.isCorrect === false).length,
-    0
-  );
-
   const visibleGroups = wrongOnly
     ? groups
         .map((group) => ({
@@ -38,20 +31,6 @@ export function WritingQuestionGroups({
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border/70 bg-card/70 p-4">
-        <div>
-          <p className="font-medium">题目筛选</p>
-          <p className="text-sm text-muted-foreground">当前错题 {wrongQuestionCount} 道</p>
-        </div>
-        <Button
-          type="button"
-          variant={wrongOnly ? "default" : "outline"}
-          onClick={() => setWrongOnly((current) => !current)}
-        >
-          {wrongOnly ? "显示全部" : "只看错题"}
-        </Button>
-      </div>
-
       {wrongOnly && visibleGroups.length === 0 ? (
         <Card>
           <CardContent className="py-8 text-sm text-muted-foreground">当前没有已标记为错误的题目。</CardContent>

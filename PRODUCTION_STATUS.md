@@ -76,11 +76,13 @@ Writing assignment detail page:
 
 - Answer and review textareas start at one-line height and grow with entered content.
 - Student answer text is larger and bold.
+- The wrong-answer filter is available in the top status area.
 - The right-side overall review panel is narrower than before and scrolls internally when content is long.
 - Overall review cards can jump to the corresponding assignment section.
 - Section state is color-coded: pending/incomplete states are visually distinct from completed states.
 - The explicit `未批阅` status badge was removed from the overall review cards.
-- A `只看错题` toggle is available.
+- Redundant cards for question filtering and original upload summary are not shown.
+- AI structuring failures show fuller error details when available, including nested `cause` information.
 
 AI configuration:
 

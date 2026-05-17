@@ -6,6 +6,7 @@ import { flattenWritingQuestions } from "@/lib/assignment/writing";
 import { ensureAuthenticatedApi } from "@/lib/auth/session";
 import { prisma } from "@/lib/db/prisma";
 import { deleteFile } from "@/lib/storage";
+import { formatErrorForDisplay } from "@/lib/utils/error";
 import { jsonError, jsonOk } from "@/lib/utils/http";
 import { mapDisplayType } from "@/lib/utils/mapping";
 import { sanitizeOptionalText } from "@/lib/utils/sanitize";
@@ -85,7 +86,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
 
       return jsonOk({ success: true, message: "AI 结构化已重新生成。" });
     } catch (error) {
-      const message = error instanceof Error ? error.message : "AI 结构化失败。";
+      const message = formatErrorForDisplay(error);
 
       await prisma.assignment.update({
         where: { id },

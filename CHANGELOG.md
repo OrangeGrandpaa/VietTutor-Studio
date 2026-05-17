@@ -6,10 +6,13 @@
 
 - Added writing assignment list filters for all, reviewed, and unreviewed records.
 - Added an `AI结构化中` status badge for writing assignments still being structured by AI.
+- Added fuller AI structuring failure details on writing assignment detail pages.
 
 ### Changed
 
 - Compact writing assignment list cards by removing helper copy and tightening action placement.
+- Moved the writing detail wrong-answer filter into the top status area.
+- Removed redundant writing detail cards for question filtering and original upload summary.
 - Updated documentation to match the current Alibaba Cloud Linux 3 + systemd production setup.
 - Clarified release, environment, certificate, and handoff notes across deployment docs.
 

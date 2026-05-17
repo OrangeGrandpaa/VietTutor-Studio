@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { Route } from "next";
 import { notFound } from "next/navigation";
 
 import { AssignmentStatusBadge } from "@/components/assignment/assignment-status-badge";
@@ -17,12 +18,15 @@ import { prisma } from "@/lib/db/prisma";
 import { formatDateTime, formatPercent } from "@/lib/utils/format";
 
 export default async function WritingAssignmentDetailPage({
-  params
+  params,
+  searchParams
 }: {
   params: Promise<{ id: string }>;
+  searchParams?: Promise<{ wrongOnly?: string }>;
 }) {
   await requireAuth();
   const { id } = await params;
+  const wrongOnly = (await searchParams)?.wrongOnly === "1";
   const assignment = await prisma.assignment.findUnique({
     where: { id },
     include: {
@@ -38,6 +42,13 @@ export default async function WritingAssignmentDetailPage({
   }
 
   const { groups, stats } = buildWritingReviewGroups(assignment.sections, assignment.aiStructuredContent);
+  const wrongQuestionCount = groups.reduce(
+    (total, group) => total + group.questions.filter((question) => question.isCorrect === false).length,
+    0
+  );
+  const wrongOnlyHref = (wrongOnly
+    ? `/assignments/writing/${assignment.id}`
+    : `/assignments/writing/${assignment.id}?wrongOnly=1`) as Route;
 
   return (
     <AppShell
@@ -62,11 +73,17 @@ export default async function WritingAssignmentDetailPage({
       }
     >
       <PageShell>
-        <div className="flex flex-wrap items-center gap-3">
-          <AssignmentStatusBadge status={assignment.status} aiStatus={assignment.aiStatus} />
-          <Badge variant="outline">总题数 {stats.totalQuestions}</Badge>
-          <Badge variant="outline">已批阅 {stats.reviewedQuestions}</Badge>
-          <Badge variant="outline">整体准确率 {formatPercent(stats.accuracy)}</Badge>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-3">
+            <AssignmentStatusBadge status={assignment.status} aiStatus={assignment.aiStatus} />
+            <Badge variant="outline">总题数 {stats.totalQuestions}</Badge>
+            <Badge variant="outline">已批阅 {stats.reviewedQuestions}</Badge>
+            <Badge variant="outline">整体准确率 {formatPercent(stats.accuracy)}</Badge>
+            <Badge variant="outline">错题 {wrongQuestionCount}</Badge>
+          </div>
+          <Link href={wrongOnlyHref} className={buttonVariants({ variant: wrongOnly ? "default" : "outline" })}>
+            {wrongOnly ? "显示全部" : "只看错题"}
+          </Link>
         </div>
 
         {assignment.aiStatus === "PENDING" ? (
@@ -89,32 +106,14 @@ export default async function WritingAssignmentDetailPage({
               <CardTitle>AI 结构化失败原因</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-sm leading-6 text-foreground/80">{assignment.aiErrorMessage}</p>
+              <pre className="whitespace-pre-wrap break-words font-sans text-sm leading-6 text-foreground/80">{assignment.aiErrorMessage}</pre>
             </CardContent>
           </Card>
         ) : null}
 
         <div className="grid gap-6 xl:grid-cols-[1.35fr_0.65fr]">
           <div className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>原始上传文件</CardTitle>
-              </CardHeader>
-              <CardContent className="flex flex-wrap items-center justify-between gap-4">
-                <div className="space-y-1 text-sm text-muted-foreground">
-                  <p>{assignment.originalFileName}</p>
-                  <p>系统会从上传文件中抽取题目并按题展示，原文件请通过下载链接查看。</p>
-                </div>
-                <Link
-                  href={`/api/files/${assignment.id}?kind=assignment&download=1`}
-                  className={buttonVariants({ variant: "outline" })}
-                >
-                  下载原始文件
-                </Link>
-              </CardContent>
-            </Card>
-
-            <WritingQuestionGroups assignmentId={assignment.id} groups={groups} />
+            <WritingQuestionGroups assignmentId={assignment.id} groups={groups} wrongOnly={wrongOnly} />
           </div>
 
           <WritingReviewPanel groups={groups} stats={stats} />
