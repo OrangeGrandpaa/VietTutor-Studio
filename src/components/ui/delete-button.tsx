@@ -4,21 +4,29 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
 
-import { Button } from "@/components/ui/button";
+import { Button, type ButtonProps } from "@/components/ui/button";
 
 export function DeleteButton({
   endpoint,
-  label = "删除"
+  label = "删除",
+  variant = "ghost",
+  size = "default",
+  className
 }: {
   endpoint: string;
   label?: string;
+  variant?: ButtonProps["variant"];
+  size?: ButtonProps["size"];
+  className?: string;
 }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
 
   return (
     <Button
-      variant="ghost"
+      className={className}
+      variant={variant}
+      size={size}
       disabled={loading}
       onClick={async () => {
         if (!window.confirm("确认删除？此操作无法撤销。")) {

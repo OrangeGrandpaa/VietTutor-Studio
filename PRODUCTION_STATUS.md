@@ -58,6 +58,12 @@ Back up `prisma/dev.db` and `uploads` before risky deployments or schema changes
 
 ## Current Application Behavior
 
+Writing assignment list page:
+
+- The list has filters for `全部`, `已批阅`, and `未批阅`.
+- List cards are compact and place `查看` / `删除` actions beside each assignment record.
+- Assignments with pending AI processing show `AI结构化中`.
+
 Writing assignment upload:
 
 - Uploads should return quickly and enter the assignment detail page.

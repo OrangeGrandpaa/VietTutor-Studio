@@ -10,6 +10,10 @@ export function AssignmentStatusBadge({
   status: AssignmentStatus;
   aiStatus?: AiProcessStatus;
 }) {
+  if (aiStatus === "PENDING") {
+    return <Badge variant="warning">AI结构化中</Badge>;
+  }
+
   if (aiStatus === "FAILED") {
     return <Badge variant="warning">AI 待重试</Badge>;
   }

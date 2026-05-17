@@ -2,8 +2,14 @@
 
 ## 2026-05-18
 
+### Added
+
+- Added writing assignment list filters for all, reviewed, and unreviewed records.
+- Added an `AI结构化中` status badge for writing assignments still being structured by AI.
+
 ### Changed
 
+- Compact writing assignment list cards by removing helper copy and tightening action placement.
 - Updated documentation to match the current Alibaba Cloud Linux 3 + systemd production setup.
 - Clarified release, environment, certificate, and handoff notes across deployment docs.
 
