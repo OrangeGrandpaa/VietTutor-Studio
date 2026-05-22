@@ -42,22 +42,30 @@ function splitQuestionBlocks(markdown: string) {
   return blocks.filter(Boolean);
 }
 
+function normalizeQuestionText(text: string) {
+  return text
+    .split("\n")
+    .map((line) => line.trimEnd())
+    .filter((line) => line.trim().length > 0)
+    .join("\n");
+}
+
 export function buildWritingFallback(markdown: string): WritingStructuredContent {
   const parsed = matter(markdown);
   const questions = splitQuestionBlocks(parsed.content).map((block, index) => ({
     question_number: index + 1,
-    prompt: block,
+    prompt: normalizeQuestionText(block),
     answer: "",
     detected_level: "",
     suggested_display_type: block.length < 60 ? "sentence" : "paragraph"
   })) as WritingStructuredContent["parts"][number]["questions"];
 
   return {
-    title: (parsed.data.title as string | undefined) ?? "Untitled writing assignment",
+    title: (parsed.data.title as string | undefined) ?? "未命名笔头作业",
     assignment_type: "writing",
     parts: [
       {
-        part_title: "Question list",
+        part_title: "题目列表",
         instruction: "",
         questions
       }

@@ -45,6 +45,14 @@ function normalizeText(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
 }
 
+function normalizeQuestionText(value: unknown) {
+  return normalizeText(value)
+    .split("\n")
+    .map((line) => line.trimEnd())
+    .filter((line) => line.trim().length > 0)
+    .join("\n");
+}
+
 function normalizeDisplayType(value: unknown) {
   const normalized = normalizeText(value).toLowerCase();
   return normalized || "paragraph";
@@ -93,7 +101,7 @@ export function normalizeWritingStructure(value: unknown): WritingStructuredCont
                       typeof rawQuestion.question_number === "number"
                         ? rawQuestion.question_number
                         : questionIndex + 1,
-                    prompt: normalizeText(rawQuestion.prompt),
+                    prompt: normalizeQuestionText(rawQuestion.prompt),
                     answer: normalizeText(rawQuestion.answer),
                     detected_level: normalizeText(rawQuestion.detected_level),
                     suggested_display_type:
@@ -106,7 +114,7 @@ export function normalizeWritingStructure(value: unknown): WritingStructuredCont
             : [];
 
           return {
-            part_title: normalizeText(rawPart.part_title) || `Section ${partIndex + 1}`,
+            part_title: normalizeText(rawPart.part_title) || `第 ${partIndex + 1} 部分`,
             instruction: normalizeText(rawPart.instruction),
             questions
           };
@@ -115,7 +123,7 @@ export function normalizeWritingStructure(value: unknown): WritingStructuredCont
     : [];
 
   return {
-    title: normalizeText(raw.title) || "Untitled writing assignment",
+    title: normalizeText(raw.title) || "未命名笔头作业",
     assignment_type: raw.assignment_type === "writing" ? "writing" : "writing",
     parts
   };
@@ -124,7 +132,7 @@ export function normalizeWritingStructure(value: unknown): WritingStructuredCont
 export function flattenWritingQuestions(structured: WritingStructuredContent) {
   return structured.parts.flatMap((part, partIndex) =>
     part.questions.map((question, questionIndex) => ({
-      partTitle: part.part_title || `Section ${partIndex + 1}`,
+      partTitle: part.part_title || `第 ${partIndex + 1} 部分`,
       partIndex,
       instruction: part.instruction,
       questionNumber: question.question_number || questionIndex + 1,
@@ -139,18 +147,18 @@ export function flattenWritingQuestions(structured: WritingStructuredContent) {
 export function buildFallbackWritingStructure(sections: SectionWithFeedbacks[]) {
   const questions = sections.map((section, index) => ({
     question_number: index + 1,
-    prompt: section.originalText,
+    prompt: normalizeQuestionText(section.originalText),
     answer: section.vietnameseText ?? "",
     detected_level: section.detectedLevel ?? "",
     suggested_display_type: "paragraph" as const
   }));
 
   return {
-    title: "Untitled writing assignment",
+    title: "未命名笔头作业",
     assignment_type: "writing" as const,
     parts: [
       {
-        part_title: "Question list",
+        part_title: "题目列表",
         instruction: "",
         questions
       }
@@ -185,11 +193,11 @@ export function buildWritingReviewGroups(
       id: section.id,
       orderIndex: section.orderIndex,
       questionNumber: question?.questionNumber ?? index + 1,
-      partTitle: question?.partTitle ?? "Question list",
+      partTitle: question?.partTitle ?? "题目列表",
       partIndex: question?.partIndex ?? 0,
       sectionTitle: section.sectionTitle,
       prompt: question?.prompt || section.originalText,
-      answer: question?.answer || (section.vietnameseText ?? null),
+      answer: section.vietnameseText ?? question?.answer ?? null,
       displayType: question?.displayType ?? "paragraph",
       detectedLevel: question?.detectedLevel ?? section.detectedLevel ?? null,
       feedbackId: feedback?.id ?? null,
@@ -204,7 +212,7 @@ export function buildWritingReviewGroups(
     const correctQuestions = questions.filter((item) => item.isCorrect === true).length;
 
     return {
-      partTitle: part.part_title || `Section ${partIndex + 1}`,
+      partTitle: part.part_title || `第 ${partIndex + 1} 部分`,
       partIndex,
       instruction: part.instruction,
       totalQuestions: questions.length,
@@ -220,7 +228,7 @@ export function buildWritingReviewGroups(
     const correctQuestions = questionItems.filter((item) => item.isCorrect === true).length;
 
     groups.push({
-      partTitle: "Question list",
+      partTitle: "题目列表",
       partIndex: 0,
       instruction: "",
       totalQuestions: questionItems.length,

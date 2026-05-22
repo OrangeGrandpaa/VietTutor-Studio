@@ -79,15 +79,11 @@ export function WritingQuestionGroups({
                 <div className="space-y-3">
                   <div>
                     <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">题目内容</p>
-                    <p className="mt-2 whitespace-pre-wrap text-xl font-medium leading-8">{question.prompt}</p>
-                  </div>
-
-                  <div className="rounded-xl bg-secondary/40 p-4">
-                    <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">学生答案</p>
                     <WritingAnswerEditor
                       assignmentId={assignmentId}
                       sectionId={question.id}
                       initialAnswer={question.answer ?? ""}
+                      prompt={question.prompt}
                     />
                   </div>
 

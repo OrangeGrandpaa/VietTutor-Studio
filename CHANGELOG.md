@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-05-22
+
+### Changed
+
+- Replaced writing detail `______` blanks with inline answer inputs that start at the blank width and expand with typed content.
+- Removed the separate writing student-answer textarea and moved answer saving beside the inline blank inputs.
+- Improved writing structuring guidance and normalization so question bodies drop internal blank lines, while assignment and part names are kept in Chinese.
+- Updated writing fallback titles and part labels to use Chinese defaults.
+
 ## 2026-05-18
 
 ### Added

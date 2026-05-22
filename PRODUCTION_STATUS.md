@@ -1,6 +1,6 @@
 # Production Status
 
-Last updated: 2026-05-18
+Last updated: 2026-05-22
 
 This file records the current real-world production state for VietTutor Studio. Use it with:
 
@@ -35,9 +35,9 @@ Production does not use PM2. PM2 was attempted earlier, but the final stable set
 
 ## Repository State
 
-Latest repository commit documented by this status file:
+Latest repository state documented by this status file:
 
-- `e8a2549` - `Remove writing review status badges`
+- Writing detail page inline-blank answer inputs and Chinese structuring-name normalization are included in the documented behavior.
 
 Do not assume the server is on this exact commit without checking it directly:
 
@@ -74,8 +74,10 @@ Writing assignment upload:
 
 Writing assignment detail page:
 
-- Answer and review textareas start at one-line height and grow with entered content.
-- Student answer text is larger and bold.
+- Question `______` blanks render as inline answer inputs that start at the blank width and expand with typed content.
+- The old separate student-answer textarea is not shown on fill-in-the-blank questions.
+- Saving inline answers clears existing review feedback for that question so stale feedback is not reused.
+- Review textareas start at one-line height and grow with entered content.
 - The wrong-answer filter is available in the top status area.
 - The right-side overall review panel is narrower than before and scrolls internally when content is long.
 - Overall review cards can jump to the corresponding assignment section.
@@ -83,6 +85,7 @@ Writing assignment detail page:
 - The explicit `未批阅` status badge was removed from the overall review cards.
 - Redundant cards for question filtering and original upload summary are not shown.
 - AI structuring failures show fuller error details when available, including nested `cause` information.
+- AI structuring and fallback normalization remove blank lines inside a single question and keep assignment/part names in Chinese.
 
 AI configuration:
 
