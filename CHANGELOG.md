@@ -1,5 +1,17 @@
 # Changelog
 
+## 2026-05-24
+
+### Added
+
+- Added automatic total-page detection for uploaded course materials where the file type exposes a page or slide count.
+
+### Changed
+
+- Compact course material detail layout by narrowing the progress form and reducing the learning-position card height.
+- Simplified course progress editing so teachers enter only the current page; completion percentage is calculated from the detected total page count.
+- Reduced the course progress note field to one-line height with auto-growth as more text is entered.
+
 ## 2026-05-22
 
 ### Changed

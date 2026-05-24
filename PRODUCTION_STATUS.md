@@ -1,6 +1,6 @@
 # Production Status
 
-Last updated: 2026-05-22
+Last updated: 2026-05-24
 
 This file records the current real-world production state for VietTutor Studio. Use it with:
 
@@ -37,6 +37,7 @@ Production does not use PM2. PM2 was attempted earlier, but the final stable set
 
 Latest repository state documented by this status file:
 
+- Course material progress now stores detected `totalPages` and calculates completion from `currentPage`.
 - Writing detail page inline-blank answer inputs and Chinese structuring-name normalization are included in the documented behavior.
 
 Do not assume the server is on this exact commit without checking it directly:
@@ -92,6 +93,13 @@ AI configuration:
 - `KIMI_MAX_TOKENS` is configurable in the server `.env`.
 - The user intended to set production to `KIMI_MAX_TOKENS="16384"` after seeing length-limited Kimi responses.
 - `.env` is server-local and is not committed to Git.
+
+Course materials:
+
+- Uploads attempt to detect total pages for PDF, PPTX, DOCX, images, Markdown, and plain text.
+- The material detail progress form only asks for the current page; total pages and completion percentage are not manually edited.
+- Completion is calculated from `currentPage / totalPages` when a page count is available.
+- Audio, video, legacy binary Office files, and files without readable page metadata may have empty `totalPages`; these can still store learning position.
 
 ## HTTPS Certificate
 
@@ -157,6 +165,8 @@ Update with Prisma schema changes:
 cd /var/www/VietTutor-Studio
 bash scripts/deploy.sh --with-db-push
 ```
+
+The 2026-05-24 course material progress update includes a Prisma schema change (`CourseMaterial.totalPages`), so deploy that release with `--with-db-push`.
 
 The script installs dependencies from `package-lock.json`, builds the app, and restarts `vietutor-studio`.
 

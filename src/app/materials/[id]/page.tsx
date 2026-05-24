@@ -22,7 +22,7 @@ const TEXT = {
   learningPositionTitle: "\u5b66\u4e60\u4f4d\u7f6e",
   completion: "\u5f53\u524d\u5b8c\u6210\u5ea6",
   pagePosition: "\u5df2\u5b66\u4e60\u5230\u7b2c {current} \u9875\uff0c\u5171 {total} \u9875",
-  pagePositionWithoutTotal: "\u5df2\u5b66\u4e60\u5230\u7b2c {current} \u9875",
+  pagePositionWithoutTotal: "\u5df2\u5b66\u4e60\u5230\u7b2c {current} \u9875\uff0c\u603b\u9875\u6570\u5f85\u8bc6\u522b",
   pagePositionMissing: "\u6682\u672a\u8bb0\u5f55\u5b66\u4e60\u4f4d\u7f6e",
   unsupportedPreview:
     "\u5f53\u524d\u6587\u4ef6\u7c7b\u578b\u4e0d\u652f\u6301\u5185\u5d4c\u9884\u89c8\uff0c\u53ef\u4f7f\u7528\u53f3\u4e0a\u89d2\u6309\u94ae\u4e0b\u8f7d\u3002",
@@ -31,9 +31,15 @@ const TEXT = {
   downloadFile: "\u4e0b\u8f7d\u6587\u4ef6"
 } as const;
 
-function formatLearningPosition(currentPage: number | null) {
+function formatLearningPosition(currentPage: number | null, totalPages: number | null) {
   if (!currentPage) {
     return TEXT.pagePositionMissing;
+  }
+
+  if (totalPages) {
+    return TEXT.pagePosition
+      .replace("{current}", String(currentPage))
+      .replace("{total}", String(totalPages));
   }
 
   return TEXT.pagePositionWithoutTotal.replace("{current}", String(currentPage));
@@ -122,22 +128,22 @@ export default async function MaterialDetailPage({
           <Badge variant="outline">{progressStatusLabel(material.progressStatus)}</Badge>
         </div>
 
-        <div className="grid gap-6 xl:grid-cols-[1fr_0.85fr]">
+        <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(300px,0.32fr)]">
           <div className="space-y-6">
             <Card>
-              <CardHeader>
+              <CardHeader className="pb-2">
                 <CardTitle>{TEXT.learningPositionTitle}</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-2 pb-4">
                 <div>
-                  <div className="mb-2 flex items-center justify-between text-sm">
+                  <div className="mb-1.5 flex items-center justify-between text-sm">
                     <span className="text-muted-foreground">{TEXT.completion}</span>
                     <span>{material.progressPercent}%</span>
                   </div>
                   <Progress value={material.progressPercent} />
                 </div>
                 <p className="text-sm text-muted-foreground">
-                  {formatLearningPosition(material.currentPage)}
+                  {formatLearningPosition(material.currentPage, material.totalPages)}
                 </p>
               </CardContent>
             </Card>

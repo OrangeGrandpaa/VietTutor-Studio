@@ -36,15 +36,22 @@ const TEXT = {
   learningProgress: "\u5b66\u4e60\u8fdb\u5ea6",
   recentPosition: "\u6700\u8fd1\u4f4d\u7f6e\uff1a",
   learnedPage: "\u7b2c {page} \u9875",
+  learnedPageWithTotal: "\u7b2c {page} / {total} \u9875",
   notRecorded: "\u672a\u8bb0\u5f55",
   note: "\u5907\u6ce8\uff1a",
   noNote: "\u6682\u65e0\u5907\u6ce8",
   view: "\u67e5\u770b"
 } as const;
 
-function formatRecentPosition(currentPage: number | null) {
+function formatRecentPosition(currentPage: number | null, totalPages: number | null) {
   if (!currentPage) {
     return TEXT.notRecorded;
+  }
+
+  if (totalPages) {
+    return TEXT.learnedPageWithTotal
+      .replace("{page}", String(currentPage))
+      .replace("{total}", String(totalPages));
   }
 
   return TEXT.learnedPage.replace("{page}", String(currentPage));
@@ -130,7 +137,7 @@ export default async function MaterialsPage({
                   <div className="space-y-1 text-sm text-muted-foreground">
                     <p>
                       {TEXT.recentPosition}
-                      {formatRecentPosition(material.currentPage)}
+                      {formatRecentPosition(material.currentPage, material.totalPages)}
                     </p>
                     <p>
                       {TEXT.note}

@@ -207,7 +207,16 @@ Dashboard 汇总：
 - Markdown / text
 - 图片、音频、视频
 
-文件保存到 `uploads/materials`。详情页会根据 MIME 类型内嵌预览图片、音频、视频和 PDF，其余类型提供下载。学习进度支持记录标题、备注、状态、当前页和由当前页/总页数计算出的完成百分比。
+文件保存到 `uploads/materials`。详情页会根据 MIME 类型内嵌预览图片、音频、视频和 PDF，其余类型提供下载。学习进度支持记录标题、备注、状态和当前页，完成百分比会根据当前页和系统识别到的课件总页数自动计算。
+
+课件总页数识别：
+
+- PDF 通过文件页对象计数识别页数。
+- PPTX 通过 Office 元数据识别幻灯片数。
+- DOCX 通过 Office 元数据识别页数；该值依赖文档保存时写入的元数据。
+- 图片按 1 页处理。
+- Markdown、纯文本按 1 页处理。
+- 音频、视频和无法读取页数的旧版 Office 二进制文件会保留为空，仍可记录当前学习位置。
 
 ### Protected Files
 
@@ -262,7 +271,7 @@ Fallback 在 `src/lib/ai/fallback.ts`：
 - `SpeakingUnit`：口语朗读单元。
 - `Recording`：口语录音文件。
 - `SpeakingFeedback`：口语录音批阅。
-- `CourseMaterial`：课件和学习进度。
+- `CourseMaterial`：课件、学习进度、当前页和自动识别的总页数。
 
 SQLite 文件默认位置：
 
@@ -372,6 +381,8 @@ bash scripts/deploy.sh
 cd /var/www/VietTutor-Studio
 bash scripts/deploy.sh --with-db-push
 ```
+
+2026-05-24 的课件进度更新新增了 `CourseMaterial.totalPages`，部署该版本需要使用 `--with-db-push`。
 
 发布脚本会执行：
 
