@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { Route } from "next";
 
 import { AssignmentType } from "@prisma/client";
 
@@ -7,18 +8,41 @@ import { AppShell } from "@/components/layout/app-shell";
 import { PageShell } from "@/components/layout/page-shell";
 import { EmptyState } from "@/components/ui/empty-state";
 import { DeleteButton } from "@/components/ui/delete-button";
+import { PaginationControls } from "@/components/ui/pagination-controls";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { requireAuth } from "@/lib/auth/session";
 import { prisma } from "@/lib/db/prisma";
 import { formatDateTime, formatPercent } from "@/lib/utils/format";
+import { getPagination } from "@/lib/utils/pagination";
 
-export default async function SpeakingAssignmentsPage() {
+function buildSpeakingHref(page = 1) {
+  return (page > 1 ? `/assignments/speaking?page=${page}` : "/assignments/speaking") as Route;
+}
+
+export default async function SpeakingAssignmentsPage({
+  searchParams
+}: {
+  searchParams?: Promise<{ page?: string }>;
+}) {
   await requireAuth();
+  const params = await searchParams;
+  const where = { type: AssignmentType.SPEAKING };
+  const totalItems = await prisma.assignment.count({ where });
+  const pagination = getPagination({ page: params?.page, totalItems });
   const assignments = await prisma.assignment.findMany({
-    where: { type: AssignmentType.SPEAKING },
+    where,
     orderBy: { createdAt: "desc" },
-    include: {
+    skip: pagination.skip,
+    take: pagination.pageSize,
+    select: {
+      id: true,
+      title: true,
+      status: true,
+      aiStatus: true,
+      createdAt: true,
+      originalFileName: true,
+      overallScore: true,
       _count: {
         select: {
           speakingUnits: true
@@ -74,6 +98,12 @@ export default async function SpeakingAssignmentsPage() {
                 </CardContent>
               </Card>
             ))}
+            <PaginationControls
+              buildHref={buildSpeakingHref}
+              page={pagination.page}
+              totalItems={pagination.totalItems}
+              totalPages={pagination.totalPages}
+            />
           </div>
         )}
       </PageShell>

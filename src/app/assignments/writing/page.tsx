@@ -8,12 +8,14 @@ import { AppShell } from "@/components/layout/app-shell";
 import { PageShell } from "@/components/layout/page-shell";
 import { EmptyState } from "@/components/ui/empty-state";
 import { DeleteButton } from "@/components/ui/delete-button";
+import { PaginationControls } from "@/components/ui/pagination-controls";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardTitle } from "@/components/ui/card";
 import { requireAuth } from "@/lib/auth/session";
 import { prisma } from "@/lib/db/prisma";
 import { cn } from "@/lib/utils/cn";
 import { formatDateTime, formatPercent } from "@/lib/utils/format";
+import { getPagination } from "@/lib/utils/pagination";
 
 type WritingFilter = "all" | "reviewed" | "unreviewed";
 
@@ -31,24 +33,52 @@ function normalizeFilter(value: string | undefined): WritingFilter {
   return value === "reviewed" || value === "unreviewed" ? value : "all";
 }
 
+function buildWritingHref(filter: WritingFilter, page = 1) {
+  const params = new URLSearchParams();
+
+  if (filter !== "all") {
+    params.set("filter", filter);
+  }
+
+  if (page > 1) {
+    params.set("page", String(page));
+  }
+
+  const query = params.toString();
+  return (query ? `/assignments/writing?${query}` : "/assignments/writing") as Route;
+}
+
 export default async function WritingAssignmentsPage({
   searchParams
 }: {
-  searchParams?: Promise<{ filter?: string }>;
+  searchParams?: Promise<{ filter?: string; page?: string }>;
 }) {
   await requireAuth();
-  const activeFilter = normalizeFilter((await searchParams)?.filter);
+  const params = await searchParams;
+  const activeFilter = normalizeFilter(params?.filter);
+  const where = {
+    type: AssignmentType.WRITING,
+    ...(activeFilter === "reviewed"
+      ? { status: AssignmentStatus.REVIEWED }
+      : activeFilter === "unreviewed"
+        ? { status: { not: AssignmentStatus.REVIEWED } }
+        : {})
+  };
+  const totalItems = await prisma.assignment.count({ where });
+  const pagination = getPagination({ page: params?.page, totalItems });
   const assignments = await prisma.assignment.findMany({
-    where: {
-      type: AssignmentType.WRITING,
-      ...(activeFilter === "reviewed"
-        ? { status: AssignmentStatus.REVIEWED }
-        : activeFilter === "unreviewed"
-          ? { status: { not: AssignmentStatus.REVIEWED } }
-          : {})
-    },
+    where,
     orderBy: { createdAt: "desc" },
-    include: {
+    skip: pagination.skip,
+    take: pagination.pageSize,
+    select: {
+      id: true,
+      title: true,
+      status: true,
+      aiStatus: true,
+      createdAt: true,
+      originalFileName: true,
+      accuracyScore: true,
       _count: {
         select: {
           sections: true
@@ -131,6 +161,12 @@ export default async function WritingAssignmentsPage({
                 </div>
               </Card>
             ))}
+            <PaginationControls
+              buildHref={(page) => buildWritingHref(activeFilter, page)}
+              page={pagination.page}
+              totalItems={pagination.totalItems}
+              totalPages={pagination.totalPages}
+            />
           </div>
         )}
       </PageShell>

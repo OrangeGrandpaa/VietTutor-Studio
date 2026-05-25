@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { Route } from "next";
 
 import { MaterialFileType } from "@prisma/client";
 
@@ -7,6 +8,7 @@ import { PageShell } from "@/components/layout/page-shell";
 import { EmptyState } from "@/components/ui/empty-state";
 import { DeleteButton } from "@/components/ui/delete-button";
 import { Badge } from "@/components/ui/badge";
+import { PaginationControls } from "@/components/ui/pagination-controls";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -18,6 +20,7 @@ import {
   materialFileTypeLabel,
   progressStatusLabel
 } from "@/lib/utils/format";
+import { getPagination } from "@/lib/utils/pagination";
 
 const TEXT = {
   pageTitle: "\u8bfe\u4ef6\u5e93",
@@ -57,18 +60,51 @@ function formatRecentPosition(currentPage: number | null, totalPages: number | n
   return TEXT.learnedPage.replace("{page}", String(currentPage));
 }
 
+function buildMaterialsHref(type: string | undefined, page = 1) {
+  const params = new URLSearchParams();
+
+  if (type) {
+    params.set("type", type);
+  }
+
+  if (page > 1) {
+    params.set("page", String(page));
+  }
+
+  const query = params.toString();
+  return (query ? `/materials?${query}` : "/materials") as Route;
+}
+
 export default async function MaterialsPage({
   searchParams
 }: {
-  searchParams?: Promise<{ type?: string }>;
+  searchParams?: Promise<{ type?: string; page?: string }>;
 }) {
   await requireAuth();
-  const type = (await searchParams)?.type;
+  const params = await searchParams;
+  const type = params?.type;
   const fileTypeFilter = type && type in MaterialFileType ? (type as keyof typeof MaterialFileType) : null;
+  const where = fileTypeFilter ? { fileType: MaterialFileType[fileTypeFilter] } : undefined;
+  const totalItems = await prisma.courseMaterial.count({ where });
+  const pagination = getPagination({ page: params?.page, totalItems });
 
   const materials = await prisma.courseMaterial.findMany({
-    where: fileTypeFilter ? { fileType: MaterialFileType[fileTypeFilter] } : undefined,
-    orderBy: { createdAt: "desc" }
+    where,
+    orderBy: { createdAt: "desc" },
+    skip: pagination.skip,
+    take: pagination.pageSize,
+    select: {
+      id: true,
+      title: true,
+      fileType: true,
+      category: true,
+      progressStatus: true,
+      progressPercent: true,
+      currentPage: true,
+      totalPages: true,
+      note: true,
+      createdAt: true
+    }
   });
 
   return (
@@ -153,6 +189,12 @@ export default async function MaterialsPage({
                 </CardContent>
               </Card>
             ))}
+            <PaginationControls
+              buildHref={(page) => buildMaterialsHref(fileTypeFilter ?? undefined, page)}
+              page={pagination.page}
+              totalItems={pagination.totalItems}
+              totalPages={pagination.totalPages}
+            />
           </div>
         )}
       </PageShell>

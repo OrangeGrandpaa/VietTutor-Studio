@@ -72,38 +72,43 @@ enum ProgressStatus {
 }
 
 model UserSession {
-  id         String   @id @default(cuid())
-  tokenHash  String   @unique
-  ip         String?
-  userAgent  String?
-  createdAt  DateTime @default(now())
-  expiresAt  DateTime
-  revokedAt  DateTime?
+  id        String    @id @default(cuid())
+  tokenHash String    @unique
+  ip        String?
+  userAgent String?
+  createdAt DateTime  @default(now())
+  expiresAt DateTime
+  revokedAt DateTime?
 }
 
 model Assignment {
-  id                       String           @id @default(cuid())
-  title                    String
-  type                     AssignmentType
-  originalFileName         String
-  originalFilePath         String?
-  originalMimeType         String?
-  originalContent          String
-  aiStructuredContent      Json?
-  aiStatus                 AiProcessStatus  @default(PENDING)
-  aiErrorMessage           String?
-  status                   AssignmentStatus @default(PENDING_REVIEW)
-  accuracyScore            Int?
-  overallScore             Int?
-  createdAt                DateTime         @default(now())
-  updatedAt                DateTime         @updatedAt
-  sections                 AssignmentSection[]
-  feedbacks                TeacherFeedback[]
-  speakingUnits            SpeakingUnit[]
+  id                  String              @id @default(cuid())
+  title               String
+  type                AssignmentType
+  originalFileName    String
+  originalFilePath    String?
+  originalMimeType    String?
+  originalContent     String
+  aiStructuredContent Json?
+  aiStatus            AiProcessStatus     @default(PENDING)
+  aiErrorMessage      String?
+  status              AssignmentStatus    @default(PENDING_REVIEW)
+  accuracyScore       Int?
+  overallScore        Int?
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+  sections            AssignmentSection[]
+  feedbacks           TeacherFeedback[]
+  speakingUnits       SpeakingUnit[]
+
+  @@index([type, createdAt])
+  @@index([type, status, createdAt])
+  @@index([status, createdAt])
+  @@index([createdAt])
 }
 
 model AssignmentSection {
-  id                 String      @id @default(cuid())
+  id                 String            @id @default(cuid())
   assignmentId       String
   sectionTitle       String
   originalText       String
@@ -112,46 +117,46 @@ model AssignmentSection {
   detectedLevel      String?
   displayType        DisplayType
   orderIndex         Int
-  createdAt          DateTime    @default(now())
-  updatedAt          DateTime    @updatedAt
-  assignment         Assignment  @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+  assignment         Assignment        @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
   feedbacks          TeacherFeedback[]
 
   @@index([assignmentId, orderIndex])
 }
 
 model TeacherFeedback {
-  id                String        @id @default(cuid())
-  assignmentId      String
-  sectionId         String?
-  explanation       String?
-  score             Int?
-  createdAt         DateTime      @default(now())
-  updatedAt         DateTime      @updatedAt
-  assignment        Assignment    @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
-  section           AssignmentSection? @relation(fields: [sectionId], references: [id], onDelete: SetNull)
+  id           String             @id @default(cuid())
+  assignmentId String
+  sectionId    String?
+  explanation  String?
+  score        Int?
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+  assignment   Assignment         @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  section      AssignmentSection? @relation(fields: [sectionId], references: [id], onDelete: SetNull)
 
   @@index([assignmentId])
   @@index([sectionId])
 }
 
 model SpeakingUnit {
-  id          String           @id @default(cuid())
+  id           String           @id @default(cuid())
   assignmentId String
-  unitType    SpeakingUnitType
-  content     String
-  orderIndex  Int
-  createdAt   DateTime         @default(now())
-  updatedAt   DateTime         @updatedAt
-  assignment  Assignment       @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
-  recordings  Recording[]
+  unitType     SpeakingUnitType
+  content      String
+  orderIndex   Int
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+  assignment   Assignment       @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  recordings   Recording[]
 
   @@index([assignmentId, orderIndex])
 }
 
 model Recording {
   id             String            @id @default(cuid())
-  speakingUnitId  String
+  speakingUnitId String
   filePath       String
   duration       Float?
   mimeType       String
@@ -164,28 +169,32 @@ model Recording {
 }
 
 model SpeakingFeedback {
-  id                 String    @id @default(cuid())
-  recordingId        String    @unique
-  teacherSuggestion  String?
-  overallScore       Int?
-  createdAt          DateTime  @default(now())
-  updatedAt          DateTime  @updatedAt
-  recording          Recording @relation(fields: [recordingId], references: [id], onDelete: Cascade)
+  id                String    @id @default(cuid())
+  recordingId       String    @unique
+  teacherSuggestion String?
+  overallScore      Int?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  recording         Recording @relation(fields: [recordingId], references: [id], onDelete: Cascade)
 }
 
 model CourseMaterial {
-  id               String           @id @default(cuid())
-  title            String
-  fileName         String
-  filePath         String
-  mimeType         String?
-  fileType         MaterialFileType
-  category         MaterialCategory
-  note             String?
-  progressStatus   ProgressStatus   @default(NOT_STARTED)
-  progressPercent  Int              @default(0)
-  currentPage      Int?
-  totalPages       Int?
-  createdAt        DateTime         @default(now())
-  updatedAt        DateTime         @updatedAt
+  id              String           @id @default(cuid())
+  title           String
+  fileName        String
+  filePath        String
+  mimeType        String?
+  fileType        MaterialFileType
+  category        MaterialCategory
+  note            String?
+  progressStatus  ProgressStatus   @default(NOT_STARTED)
+  progressPercent Int              @default(0)
+  currentPage     Int?
+  totalPages      Int?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  @@index([fileType, createdAt])
+  @@index([progressStatus])
+  @@index([createdAt])
 }

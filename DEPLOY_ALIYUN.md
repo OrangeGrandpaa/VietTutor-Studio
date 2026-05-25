@@ -239,7 +239,7 @@ bash scripts/deploy.sh --with-db-push
 
 The script runs `git pull`, `npm ci`, optionally `npm run db:push`, `npm run build`, and restarts `vietutor-studio`.
 
-The course material progress update from 2026-05-24 adds `CourseMaterial.totalPages`, so deploy that release with `--with-db-push`.
+The course material progress update from 2026-05-24 adds `CourseMaterial.totalPages`, and the performance update from 2026-05-25 adds Prisma indexes, so deploy those releases with `--with-db-push`.
 
 ## 11. Verification
 

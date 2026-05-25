@@ -237,6 +237,18 @@ download=1      # 可选，强制下载
 
 `src/lib/storage/index.ts` 会限制读取路径必须位于 `uploads/` 内，避免路径穿越。
 
+文件响应行为：
+
+- `/api/files/[id]` 使用流式返回，避免大文件一次性读入服务器内存。
+- 支持 HTTP `Range` 请求，音频、视频、PDF 预览可以按需读取片段。
+- 文件查询只读取路径、文件名和 MIME 类型等必要字段，不加载作业原文等大字段。
+
+## Performance Notes
+
+- 作业和课件列表使用分页，每页默认 20 条记录。
+- Dashboard 统计使用数据库 `count`、`aggregate` 和 `groupBy`，避免全量加载历史记录后再计算。
+- Prisma schema 为作业类型/状态/创建时间、课件类型/创建时间、课件进度状态建立了索引。
+
 ## AI And Extraction
 
 作业文本抽取在 `src/lib/assignment/source-extraction.ts`：
@@ -382,7 +394,7 @@ cd /var/www/VietTutor-Studio
 bash scripts/deploy.sh --with-db-push
 ```
 
-2026-05-24 的课件进度更新新增了 `CourseMaterial.totalPages`，部署该版本需要使用 `--with-db-push`。
+2026-05-24 的课件进度更新新增了 `CourseMaterial.totalPages`，部署该版本需要使用 `--with-db-push`。2026-05-25 的性能优化新增了 Prisma 索引，也需要使用 `--with-db-push`。
 
 发布脚本会执行：
 

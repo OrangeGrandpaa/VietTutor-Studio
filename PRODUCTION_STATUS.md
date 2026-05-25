@@ -1,6 +1,6 @@
 # Production Status
 
-Last updated: 2026-05-24
+Last updated: 2026-05-25
 
 This file records the current real-world production state for VietTutor Studio. Use it with:
 
@@ -37,6 +37,7 @@ Production does not use PM2. PM2 was attempted earlier, but the final stable set
 
 Latest repository state documented by this status file:
 
+- Assignment and material list pages are paginated, dashboard metrics use database aggregates, and protected file responses support streaming with HTTP `Range`.
 - Course material progress now stores detected `totalPages` and calculates completion from `currentPage`.
 - Writing detail page inline-blank answer inputs and Chinese structuring-name normalization are included in the documented behavior.
 
@@ -62,8 +63,13 @@ Back up `prisma/dev.db` and `uploads` before risky deployments or schema changes
 Writing assignment list page:
 
 - The list has filters for `全部`, `已批阅`, and `未批阅`.
+- The list is paginated to keep page render and query time stable as history grows.
 - List cards are compact and place `查看` / `删除` actions beside each assignment record.
 - Assignments with pending AI processing show `AI结构化中`.
+
+Speaking assignment list page:
+
+- The list is paginated and only loads card-rendering fields plus the unit count.
 
 Writing assignment upload:
 
@@ -96,10 +102,16 @@ AI configuration:
 
 Course materials:
 
+- The list is paginated and type filters use indexed queries.
 - Uploads attempt to detect total pages for PDF, PPTX, DOCX, images, Markdown, and plain text.
 - The material detail progress form only asks for the current page; total pages and completion percentage are not manually edited.
 - Completion is calculated from `currentPage / totalPages` when a page count is available.
 - Audio, video, legacy binary Office files, and files without readable page metadata may have empty `totalPages`; these can still store learning position.
+
+Dashboard and files:
+
+- Dashboard totals, averages, and material status counts are calculated with database aggregate queries instead of full-table application-side scans.
+- Protected assignment, material, and recording files stream from disk and support HTTP `Range`, improving large PDF/video/audio access and reducing memory pressure.
 
 ## HTTPS Certificate
 
@@ -166,7 +178,7 @@ cd /var/www/VietTutor-Studio
 bash scripts/deploy.sh --with-db-push
 ```
 
-The 2026-05-24 course material progress update includes a Prisma schema change (`CourseMaterial.totalPages`), so deploy that release with `--with-db-push`.
+The 2026-05-24 course material progress update includes a Prisma schema change (`CourseMaterial.totalPages`), and the 2026-05-25 performance update adds Prisma indexes. Deploy these releases with `--with-db-push`.
 
 The script installs dependencies from `package-lock.json`, builds the app, and restarts `vietutor-studio`.
 

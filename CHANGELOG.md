@@ -1,5 +1,18 @@
 # Changelog
 
+## 2026-05-25
+
+### Added
+
+- Added database indexes for assignment and course material list, filter, and dashboard queries.
+- Added protected-file streaming with HTTP `Range` support for smoother large file, audio, video, and PDF access.
+
+### Changed
+
+- Paginated writing assignment, speaking assignment, and course material list pages.
+- Reworked dashboard statistics to use database aggregate queries instead of loading full assignment and material tables into application memory.
+- Reduced list-page database payloads by selecting only fields needed for card rendering.
+
 ## 2026-05-24
 
 ### Added

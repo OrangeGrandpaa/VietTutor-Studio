@@ -1,9 +1,14 @@
-import { AssignmentType, ProgressStatus } from "@prisma/client";
+import { AssignmentStatus, AssignmentType, ProgressStatus } from "@prisma/client";
 
 import { prisma } from "@/lib/db/prisma";
 
+function roundMetric(value: number | null | undefined) {
+  return typeof value === "number" ? Math.round(value) : 0;
+}
+
 function calculateStreak(dateKeys: string[]) {
   const uniqueKeys = Array.from(new Set(dateKeys)).sort().reverse();
+  const keySet = new Set(uniqueKeys);
   let streak = 0;
   const cursor = new Date();
 
@@ -12,7 +17,7 @@ function calculateStreak(dateKeys: string[]) {
     expected.setDate(cursor.getDate() - offset);
     const key = expected.toISOString().slice(0, 10);
 
-    if (uniqueKeys.includes(key)) {
+    if (keySet.has(key)) {
       streak += 1;
     } else {
       break;
@@ -23,14 +28,66 @@ function calculateStreak(dateKeys: string[]) {
 }
 
 export async function getDashboardData() {
-  const [assignments, recentAssignments, materials, recordingsCount] = await Promise.all([
+  const activityStart = new Date();
+  activityStart.setDate(activityStart.getDate() - 366);
+
+  const [
+    totalAssignments,
+    pendingAssignments,
+    completedAssignments,
+    reviewedAccuracy,
+    writingAccuracy,
+    speakingScore,
+    recentWriting,
+    recentSpeaking,
+    trendAssignments,
+    materialStatusGroups,
+    materialProgress,
+    materialActivityDates,
+    assignmentActivityDates,
+    recordingsCount
+  ] = await Promise.all([
+    prisma.assignment.count(),
+    prisma.assignment.count({ where: { status: { not: AssignmentStatus.REVIEWED } } }),
+    prisma.assignment.count({ where: { status: AssignmentStatus.REVIEWED } }),
+    prisma.assignment.aggregate({
+      where: { accuracyScore: { not: null } },
+      _avg: { accuracyScore: true },
+      _max: { accuracyScore: true }
+    }),
+    prisma.assignment.aggregate({
+      where: { type: AssignmentType.WRITING, accuracyScore: { not: null } },
+      _avg: { accuracyScore: true }
+    }),
+    prisma.assignment.aggregate({
+      where: { type: AssignmentType.SPEAKING, overallScore: { not: null } },
+      _avg: { overallScore: true }
+    }),
     prisma.assignment.findMany({
+      where: { type: AssignmentType.WRITING },
+      take: 5,
       orderBy: { createdAt: "desc" },
       select: {
         id: true,
         title: true,
         type: true,
         status: true,
+        aiStatus: true,
+        accuracyScore: true,
+        overallScore: true,
+        createdAt: true
+      }
+    }),
+    prisma.assignment.findMany({
+      where: { type: AssignmentType.SPEAKING },
+      take: 5,
+      orderBy: { createdAt: "desc" },
+      select: {
+        id: true,
+        title: true,
+        type: true,
+        status: true,
+        aiStatus: true,
         accuracyScore: true,
         overallScore: true,
         createdAt: true
@@ -41,57 +98,35 @@ export async function getDashboardData() {
       orderBy: { createdAt: "desc" },
       select: {
         id: true,
-        title: true,
         type: true,
-        status: true,
         accuracyScore: true,
         overallScore: true,
         createdAt: true
       }
     }),
+    prisma.courseMaterial.groupBy({
+      by: ["progressStatus"],
+      _count: { _all: true }
+    }),
+    prisma.courseMaterial.aggregate({
+      _avg: { progressPercent: true }
+    }),
     prisma.courseMaterial.findMany({
-      orderBy: { createdAt: "desc" },
-      select: {
-        id: true,
-        title: true,
-        progressStatus: true,
-        progressPercent: true,
-        createdAt: true,
-        category: true
-      }
+      where: { createdAt: { gte: activityStart } },
+      select: { createdAt: true }
+    }),
+    prisma.assignment.findMany({
+      where: { createdAt: { gte: activityStart } },
+      select: { createdAt: true }
     }),
     prisma.recording.count()
   ]);
 
-  const reviewedAssignments = assignments.filter((item) => item.accuracyScore !== null);
-  const writingAssignments = assignments.filter((item) => item.type === AssignmentType.WRITING);
-  const speakingAssignments = assignments.filter((item) => item.type === AssignmentType.SPEAKING);
+  const materialCountByStatus = new Map(
+    materialStatusGroups.map((item) => [item.progressStatus, item._count._all])
+  );
 
-  const averageAccuracy =
-    reviewedAssignments.length > 0
-      ? Math.round(
-          reviewedAssignments.reduce((sum, item) => sum + (item.accuracyScore ?? 0), 0) /
-            reviewedAssignments.length
-        )
-      : 0;
-
-  const writingAverage =
-    writingAssignments.filter((item) => item.accuracyScore !== null).length > 0
-      ? Math.round(
-          writingAssignments.reduce((sum, item) => sum + (item.accuracyScore ?? 0), 0) /
-            writingAssignments.filter((item) => item.accuracyScore !== null).length
-        )
-      : 0;
-
-  const speakingAverage =
-    speakingAssignments.filter((item) => item.overallScore !== null).length > 0
-      ? Math.round(
-          speakingAssignments.reduce((sum, item) => sum + (item.overallScore ?? 0), 0) /
-            speakingAssignments.filter((item) => item.overallScore !== null).length
-        )
-      : 0;
-
-  const trend = recentAssignments
+  const trend = trendAssignments
     .slice()
     .reverse()
     .map((item) => ({
@@ -100,38 +135,35 @@ export async function getDashboardData() {
     }));
 
   const activityDates = [
-    ...assignments.map((item) => item.createdAt.toISOString().slice(0, 10)),
-    ...materials.map((item) => item.createdAt.toISOString().slice(0, 10))
+    ...assignmentActivityDates.map((item) => item.createdAt.toISOString().slice(0, 10)),
+    ...materialActivityDates.map((item) => item.createdAt.toISOString().slice(0, 10))
   ];
 
   return {
     overview: {
-      totalAssignments: assignments.length,
-      pendingAssignments: assignments.filter((item) => item.status !== "REVIEWED").length,
-      completedAssignments: assignments.filter((item) => item.status === "REVIEWED").length,
-      averageAccuracy
+      totalAssignments,
+      pendingAssignments,
+      completedAssignments,
+      averageAccuracy: roundMetric(reviewedAccuracy._avg.accuracyScore)
     },
     scores: {
-      writingAverage,
-      speakingAverage
+      writingAverage: roundMetric(writingAccuracy._avg.accuracyScore),
+      speakingAverage: roundMetric(speakingScore._avg.overallScore)
     },
-    recentWriting: recentAssignments.filter((item) => item.type === AssignmentType.WRITING).slice(0, 5),
-    recentSpeaking: recentAssignments.filter((item) => item.type === AssignmentType.SPEAKING).slice(0, 5),
+    recentWriting,
+    recentSpeaking,
     trend,
     materials: {
-      inProgress: materials.filter((item) => item.progressStatus === ProgressStatus.IN_PROGRESS).length,
-      completed: materials.filter((item) => item.progressStatus === ProgressStatus.COMPLETED).length,
-      needsReview: materials.filter((item) => item.progressStatus === ProgressStatus.NEEDS_REVIEW).length,
-      averageProgress:
-        materials.length > 0
-          ? Math.round(materials.reduce((sum, item) => sum + item.progressPercent, 0) / materials.length)
-          : 0
+      inProgress: materialCountByStatus.get(ProgressStatus.IN_PROGRESS) ?? 0,
+      completed: materialCountByStatus.get(ProgressStatus.COMPLETED) ?? 0,
+      needsReview: materialCountByStatus.get(ProgressStatus.NEEDS_REVIEW) ?? 0,
+      averageProgress: roundMetric(materialProgress._avg.progressPercent)
     },
     achievements: {
       streakDays: calculateStreak(activityDates),
       recordingsCount,
-      completedMaterials: materials.filter((item) => item.progressStatus === ProgressStatus.COMPLETED).length,
-      bestAccuracy: Math.max(0, ...reviewedAssignments.map((item) => item.accuracyScore ?? 0))
+      completedMaterials: materialCountByStatus.get(ProgressStatus.COMPLETED) ?? 0,
+      bestAccuracy: reviewedAccuracy._max.accuracyScore ?? 0
     }
   };
 }

@@ -1,6 +1,6 @@
 import "server-only";
 
-import { mkdir, readFile, rm, stat, writeFile } from "node:fs/promises";
+import { mkdir, rm, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import { randomUUID } from "node:crypto";
@@ -99,12 +99,11 @@ export async function saveUploadedFile(params: {
   } satisfies SavedFile;
 }
 
-export async function getProtectedFile(relativePath: string) {
+export async function getProtectedFileMetadata(relativePath: string) {
   const absolutePath = resolveSafePath(relativePath);
-  const [fileBuffer, fileStats] = await Promise.all([readFile(absolutePath), stat(absolutePath)]);
+  const fileStats = await stat(absolutePath);
 
   return {
-    buffer: fileBuffer,
     size: fileStats.size,
     absolutePath
   };
