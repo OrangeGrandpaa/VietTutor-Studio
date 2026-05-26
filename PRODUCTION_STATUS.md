@@ -103,7 +103,7 @@ AI configuration:
 
 Course materials:
 
-- The list is paginated and type filters use indexed queries.
+- The list is paginated, type filters use indexed queries, and cards use a compact row layout for title, labels, upload time, and actions on wider screens.
 - Uploads store title, original file name, protected file path, MIME type, file type, and course material category.
 - The material detail page no longer shows learning progress or progress editing cards.
 - The library does not record learning status, current page, total pages, completion percentage, or notes.

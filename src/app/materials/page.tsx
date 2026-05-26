@@ -10,7 +10,7 @@ import { DeleteButton } from "@/components/ui/delete-button";
 import { Badge } from "@/components/ui/badge";
 import { PaginationControls } from "@/components/ui/pagination-controls";
 import { buttonVariants } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardTitle } from "@/components/ui/card";
 import { requireAuth } from "@/lib/auth/session";
 import { prisma } from "@/lib/db/prisma";
 import {
@@ -34,7 +34,6 @@ const TEXT = {
   emptyDescription:
     "\u4e0a\u4f20 PDF\u3001Markdown \u6216\u97f3\u89c6\u9891\u8bfe\u4ef6\uff0c\u8ba9\u6750\u6599\u7edf\u4e00\u7ba1\u7406\u548c\u9884\u89c8\u3002",
   firstUpload: "\u4e0a\u4f20\u7b2c\u4e00\u4efd\u8bfe\u4ef6",
-  uploadedAt: "\u4e0a\u4f20\u65f6\u95f4\uff1a",
   view: "\u67e5\u770b"
 } as const;
 
@@ -124,28 +123,20 @@ export default async function MaterialsPage({
           <div className="grid gap-4">
             {materials.map((material) => (
               <Card key={material.id}>
-                <CardHeader className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-                  <div className="space-y-2">
-                    <CardTitle>{material.title}</CardTitle>
+                <CardContent className="flex flex-col gap-3 p-4 md:flex-row md:items-center md:justify-between">
+                  <div className="flex min-w-0 flex-col gap-2 md:flex-row md:items-center md:gap-4">
+                    <CardTitle className="truncate text-base md:max-w-[22rem]">{material.title}</CardTitle>
                     <div className="flex flex-wrap items-center gap-2">
                       <Badge variant="outline">{materialFileTypeLabel(material.fileType)}</Badge>
                       <Badge variant="outline">{materialCategoryLabel(material.category)}</Badge>
                     </div>
-                    <p className="text-sm text-muted-foreground">{formatDateTime(material.createdAt)}</p>
+                    <p className="shrink-0 text-sm text-muted-foreground">{formatDateTime(material.createdAt)}</p>
                   </div>
-                </CardHeader>
-                <CardContent className="flex flex-wrap items-center justify-between gap-4">
-                  <div className="space-y-1 text-sm text-muted-foreground">
-                    <p>
-                      {TEXT.uploadedAt}
-                      {formatDateTime(material.createdAt)}
-                    </p>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    <Link href={`/materials/${material.id}`} className={buttonVariants({ variant: "outline" })}>
+                  <div className="flex shrink-0 flex-wrap gap-2">
+                    <Link href={`/materials/${material.id}`} className={buttonVariants({ variant: "outline", size: "sm" })}>
                       {TEXT.view}
                     </Link>
-                    <DeleteButton endpoint={`/api/materials/${material.id}`} />
+                    <DeleteButton endpoint={`/api/materials/${material.id}`} size="sm" />
                   </div>
                 </CardContent>
               </Card>
