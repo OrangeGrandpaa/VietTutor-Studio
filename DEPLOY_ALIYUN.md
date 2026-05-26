@@ -75,6 +75,7 @@ KIMI_BASE_URL="https://api.moonshot.ai/v1"
 KIMI_MODEL="moonshot-v1-8k"
 KIMI_MAX_TOKENS="8192"
 MAX_UPLOAD_SIZE_MB="20"
+PROTECTED_FILE_ACCEL_REDIRECT_PREFIX="/_protected_uploads/"
 ```
 
 Generate a strong session secret:
@@ -88,6 +89,7 @@ Notes:
 - `.env` is server-local and should not be committed.
 - `DATABASE_URL="file:./dev.db"` stores SQLite at `prisma/dev.db`.
 - `KIMI_MAX_TOKENS` controls the Kimi structured-output token budget. Production may set this higher, for example `16384`, if the selected model supports it.
+- `PROTECTED_FILE_ACCEL_REDIRECT_PREFIX="/_protected_uploads/"` enables Nginx `X-Accel-Redirect` for protected uploads after the internal Nginx location below is configured.
 
 ## 5. Install Dependencies and Initialize Data
 
@@ -161,7 +163,7 @@ server {
 }
 ```
 
-HTTPS should proxy to the local Next.js app:
+HTTPS should proxy to the local Next.js app. The internal uploads location is used only by `X-Accel-Redirect`; direct browser access is denied by `internal`.
 
 ```nginx
 server {
@@ -172,6 +174,13 @@ server {
     ssl_certificate_key /etc/nginx/ssl/vietkiet.cn/privkey.pem;
 
     client_max_body_size 25m;
+
+    location /_protected_uploads/ {
+        internal;
+        alias /var/www/VietTutor-Studio/uploads/;
+        sendfile on;
+        tcp_nopush on;
+    }
 
     location / {
         proxy_pass http://127.0.0.1:3000;
@@ -240,6 +249,14 @@ bash scripts/deploy.sh --with-db-push
 The script runs `git pull`, `npm ci`, optionally `npm run db:push`, `npm run build`, and restarts `vietutor-studio`.
 
 The performance update from 2026-05-25 adds Prisma indexes, and the course material simplification from 2026-05-26 removes progress-related columns, so deploy those releases with `--with-db-push`.
+
+If enabling protected-file acceleration for the first time, update `/etc/nginx/conf.d/viettutor.conf` with the `/_protected_uploads/` internal location above, set `PROTECTED_FILE_ACCEL_REDIRECT_PREFIX="/_protected_uploads/"` in `/var/www/VietTutor-Studio/.env`, then run:
+
+```bash
+nginx -t
+systemctl reload nginx
+systemctl restart vietutor-studio
+```
 
 ## 11. Verification
 

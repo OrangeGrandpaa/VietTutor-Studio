@@ -111,6 +111,30 @@ export async function getProtectedFileMetadata(relativePath: string) {
   };
 }
 
+export function getProtectedFileAccelRedirectPath(relativePath: string) {
+  const rawPrefix = process.env.PROTECTED_FILE_ACCEL_REDIRECT_PREFIX?.trim();
+
+  if (!rawPrefix) {
+    return null;
+  }
+
+  resolveSafePath(relativePath);
+
+  const prefix = rawPrefix.startsWith("/") ? rawPrefix : `/${rawPrefix}`;
+  const normalizedPrefix = prefix.endsWith("/") ? prefix : `${prefix}/`;
+  const safePath = relativePath
+    .split(/[\\/]+/)
+    .filter(Boolean)
+    .map((segment) => encodeURIComponent(segment))
+    .join("/");
+
+  if (!safePath) {
+    throw new Error("Invalid file path.");
+  }
+
+  return `${normalizedPrefix}${safePath}`;
+}
+
 export async function deleteFile(relativePath: string | null | undefined) {
   if (!relativePath) {
     return;

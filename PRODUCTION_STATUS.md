@@ -38,7 +38,7 @@ Production does not use PM2. PM2 was attempted earlier, but the final stable set
 Latest repository state documented by this status file:
 
 - Course materials no longer store learning progress, learning status, page counts, or notes; material detail pages only show metadata, download, and preview.
-- Assignment and material list pages are paginated, dashboard metrics use database aggregates, and protected file responses support streaming with HTTP `Range`.
+- Assignment and material list pages are paginated, dashboard metrics use database aggregates, and protected file responses support streaming with HTTP `Range` plus optional Nginx `X-Accel-Redirect`.
 - Writing detail page inline-blank answer inputs and Chinese structuring-name normalization are included in the documented behavior.
 
 Do not assume the server is on this exact commit without checking it directly:
@@ -55,6 +55,7 @@ git log --oneline -n 3
 - SQLite file: `/var/www/VietTutor-Studio/prisma/dev.db`.
 - Upload directory: `/var/www/VietTutor-Studio/uploads`.
 - Environment file: `/var/www/VietTutor-Studio/.env`.
+- Protected upload acceleration prefix: `PROTECTED_FILE_ACCEL_REDIRECT_PREFIX="/_protected_uploads/"` when the matching internal Nginx location is enabled.
 
 Back up `prisma/dev.db` and `uploads` before risky deployments or schema changes.
 
@@ -112,6 +113,7 @@ Dashboard and files:
 - Dashboard totals, averages, and material library counts are calculated with database aggregate queries instead of full-table application-side scans.
 - Protected assignment, material, and recording files stream from disk and support HTTP `Range`, improving large PDF/video/audio access and reducing memory pressure.
 - Protected file responses include `ETag` and `Last-Modified` so repeat previews can reuse browser cache.
+- When `PROTECTED_FILE_ACCEL_REDIRECT_PREFIX` is configured, `/api/files/[id]` still performs authentication and database lookup, then returns `X-Accel-Redirect` so Nginx sends the actual upload bytes instead of the Next.js process.
 
 ## HTTPS Certificate
 
@@ -152,6 +154,17 @@ Nginx:
 nginx -t
 systemctl reload nginx
 systemctl status nginx --no-pager
+```
+
+Protected upload acceleration requires this HTTPS server location:
+
+```nginx
+location /_protected_uploads/ {
+    internal;
+    alias /var/www/VietTutor-Studio/uploads/;
+    sendfile on;
+    tcp_nopush on;
+}
 ```
 
 Health checks:
@@ -200,9 +213,7 @@ npm run test
 npm run build
 ```
 
-Known non-blocking build warning:
-
-- `src/app/materials/[id]/page.tsx` uses `<img>` and Next.js suggests `next/image`.
+There are currently no known build warnings that should be ignored during handoff.
 
 ## Handoff Checklist
 

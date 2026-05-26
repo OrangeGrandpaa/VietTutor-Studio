@@ -8,6 +8,7 @@
 - Removed the course material detail cards for learning progress and progress editing.
 - Removed material upload notes and page-count detection for course materials.
 - Improved material preview repeat-load behavior with file cache validators and lighter detail-page data loading.
+- Added optional Nginx `X-Accel-Redirect` support so protected upload downloads and previews can be served by Nginx after Next.js authentication.
 - Updated dashboard course material stats to show library counts instead of progress status.
 
 ## 2026-05-25

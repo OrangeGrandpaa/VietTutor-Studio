@@ -74,6 +74,7 @@ KIMI_BASE_URL="https://api.moonshot.ai/v1"
 KIMI_MODEL="moonshot-v1-8k"
 KIMI_MAX_TOKENS="8192"
 MAX_UPLOAD_SIZE_MB="20"
+PROTECTED_FILE_ACCEL_REDIRECT_PREFIX=""
 ```
 
 说明：
@@ -83,6 +84,7 @@ MAX_UPLOAD_SIZE_MB="20"
 - `KIMI_API_KEY` 为空时，依赖 Kimi 的上传或结构化路径会失败。
 - `KIMI_MAX_TOKENS` 控制结构化输出 token 上限。生产可按模型能力调高，例如 `16384`。
 - `MAX_UPLOAD_SIZE_MB` 控制所有受保护上传的最大文件大小。
+- `PROTECTED_FILE_ACCEL_REDIRECT_PREFIX` 可选。生产 Nginx 配好内部文件位置后设为 `"/_protected_uploads/"`，让 Next.js 只做鉴权，实际文件传输交给 Nginx。
 
 生成 session secret：
 
@@ -234,12 +236,14 @@ download=1      # 可选，强制下载
 - 支持 HTTP `Range` 请求，音频、视频、PDF 预览可以按需读取片段。
 - 文件响应带有 `ETag` 和 `Last-Modified`，重复打开课件预览时浏览器可复用缓存。
 - 文件查询只读取路径、文件名和 MIME 类型等必要字段，不加载作业原文等大字段。
+- 生产环境可配置 Nginx `X-Accel-Redirect`。启用后 `/api/files/[id]` 仍负责登录鉴权和文件归属查询，但文件正文由 Nginx 从内部 `uploads/` 位置发送，减少大 PDF、音视频预览占用 Next.js 进程。
 
 ## Performance Notes
 
 - 作业和课件列表使用分页，每页默认 20 条记录。
 - Dashboard 统计使用数据库 `count`、`aggregate` 和 `groupBy`，避免全量加载历史记录后再计算。
 - Prisma schema 为作业类型/状态/创建时间、课件类型/创建时间建立了索引。
+- 生产文件预览建议启用 Nginx `X-Accel-Redirect`，让大文件传输离开 Next.js 应用进程，降低课件预览拖慢其它页面的概率。
 
 ## AI And Extraction
 
@@ -360,9 +364,7 @@ npm run test
 npm run build
 ```
 
-已知非阻塞 build warning：
-
-- `src/app/materials/[id]/page.tsx` 使用 `<img>`，Next.js 会建议改成 `next/image`。
+当前没有需要在交接中特别忽略的已知 build warning。
 
 ## Production Release
 
@@ -404,6 +406,25 @@ schema 变更、AI 行为变更、上传逻辑变更前，建议先备份：
 /var/www/VietTutor-Studio/uploads
 /etc/nginx/conf.d/viettutor.conf
 /etc/nginx/ssl/vietkiet.cn
+```
+
+首次启用课件/上传文件加速时，还需要在 Nginx HTTPS server 中加入内部上传目录，并在服务器 `.env` 设置 `PROTECTED_FILE_ACCEL_REDIRECT_PREFIX="/_protected_uploads/"`：
+
+```nginx
+location /_protected_uploads/ {
+    internal;
+    alias /var/www/VietTutor-Studio/uploads/;
+    sendfile on;
+    tcp_nopush on;
+}
+```
+
+改完后执行：
+
+```bash
+nginx -t
+systemctl reload nginx
+systemctl restart vietutor-studio
 ```
 
 ## Production Operations

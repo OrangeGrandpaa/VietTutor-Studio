@@ -5,7 +5,7 @@ import { NextRequest } from "next/server";
 
 import { ensureAuthenticatedApi } from "@/lib/auth/session";
 import { prisma } from "@/lib/db/prisma";
-import { getProtectedFileMetadata } from "@/lib/storage";
+import { getProtectedFileAccelRedirectPath, getProtectedFileMetadata } from "@/lib/storage";
 import { jsonError } from "@/lib/utils/http";
 
 type FileRecord = {
@@ -153,6 +153,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     "ETag": etag,
     "Last-Modified": file.lastModified
   };
+  const accelRedirectPath = getProtectedFileAccelRedirectPath(record.filePath);
 
   if (!range && request.headers.get("if-none-match") === etag) {
     return new Response(null, {
@@ -167,6 +168,15 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       headers: {
         ...baseHeaders,
         "Content-Range": `bytes */${file.size}`
+      }
+    });
+  }
+
+  if (accelRedirectPath) {
+    return new Response(null, {
+      headers: {
+        ...baseHeaders,
+        "X-Accel-Redirect": accelRedirectPath
       }
     });
   }
