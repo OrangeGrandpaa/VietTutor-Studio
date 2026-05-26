@@ -1,4 +1,4 @@
-import { AssignmentStatus, AssignmentType, ProgressStatus } from "@prisma/client";
+import { AssignmentStatus, AssignmentType, MaterialFileType } from "@prisma/client";
 
 import { prisma } from "@/lib/db/prisma";
 
@@ -41,8 +41,8 @@ export async function getDashboardData() {
     recentWriting,
     recentSpeaking,
     trendAssignments,
-    materialStatusGroups,
-    materialProgress,
+    totalMaterials,
+    materialTypeGroups,
     materialActivityDates,
     assignmentActivityDates,
     recordingsCount
@@ -104,12 +104,10 @@ export async function getDashboardData() {
         createdAt: true
       }
     }),
+    prisma.courseMaterial.count(),
     prisma.courseMaterial.groupBy({
-      by: ["progressStatus"],
+      by: ["fileType"],
       _count: { _all: true }
-    }),
-    prisma.courseMaterial.aggregate({
-      _avg: { progressPercent: true }
     }),
     prisma.courseMaterial.findMany({
       where: { createdAt: { gte: activityStart } },
@@ -122,9 +120,13 @@ export async function getDashboardData() {
     prisma.recording.count()
   ]);
 
-  const materialCountByStatus = new Map(
-    materialStatusGroups.map((item) => [item.progressStatus, item._count._all])
+  const materialCountByType = new Map(
+    materialTypeGroups.map((item) => [item.fileType, item._count._all])
   );
+  const mediaMaterials =
+    (materialCountByType.get(MaterialFileType.IMAGE) ?? 0) +
+    (materialCountByType.get(MaterialFileType.AUDIO) ?? 0) +
+    (materialCountByType.get(MaterialFileType.VIDEO) ?? 0);
 
   const trend = trendAssignments
     .slice()
@@ -154,15 +156,16 @@ export async function getDashboardData() {
     recentSpeaking,
     trend,
     materials: {
-      inProgress: materialCountByStatus.get(ProgressStatus.IN_PROGRESS) ?? 0,
-      completed: materialCountByStatus.get(ProgressStatus.COMPLETED) ?? 0,
-      needsReview: materialCountByStatus.get(ProgressStatus.NEEDS_REVIEW) ?? 0,
-      averageProgress: roundMetric(materialProgress._avg.progressPercent)
+      total: totalMaterials,
+      pdf: materialCountByType.get(MaterialFileType.PDF) ?? 0,
+      word: materialCountByType.get(MaterialFileType.WORD) ?? 0,
+      powerpoint: materialCountByType.get(MaterialFileType.POWERPOINT) ?? 0,
+      media: mediaMaterials
     },
     achievements: {
       streakDays: calculateStreak(activityDates),
       recordingsCount,
-      completedMaterials: materialCountByStatus.get(ProgressStatus.COMPLETED) ?? 0,
+      materialsCount: totalMaterials,
       bestAccuracy: reviewedAccuracy._max.accuracyScore ?? 0
     }
   };

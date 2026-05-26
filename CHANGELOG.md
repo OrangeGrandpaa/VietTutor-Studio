@@ -1,5 +1,15 @@
 # Changelog
 
+## 2026-05-26
+
+### Changed
+
+- Simplified the course material library so it no longer records learning progress, learning status, current page, total pages, or notes.
+- Removed the course material detail cards for learning progress and progress editing.
+- Removed material upload notes and page-count detection for course materials.
+- Improved material preview repeat-load behavior with file cache validators and lighter detail-page data loading.
+- Updated dashboard course material stats to show library counts instead of progress status.
+
 ## 2026-05-25
 
 ### Added

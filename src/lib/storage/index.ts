@@ -105,6 +105,8 @@ export async function getProtectedFileMetadata(relativePath: string) {
 
   return {
     size: fileStats.size,
+    mtimeMs: Math.trunc(fileStats.mtimeMs),
+    lastModified: fileStats.mtime.toUTCString(),
     absolutePath
   };
 }

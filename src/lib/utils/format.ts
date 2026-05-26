@@ -5,7 +5,6 @@ import {
   DisplayType,
   MaterialCategory,
   MaterialFileType,
-  ProgressStatus,
   SpeakingUnitType
 } from "@prisma/client";
 
@@ -38,21 +37,6 @@ export function assignmentStatusLabel(status: AssignmentStatus) {
 
 export function assignmentTypeLabel(type: AssignmentType) {
   return type === "WRITING" ? "笔头作业" : "口语作业";
-}
-
-export function progressStatusLabel(status: ProgressStatus) {
-  switch (status) {
-    case "NOT_STARTED":
-      return "未开始";
-    case "IN_PROGRESS":
-      return "学习中";
-    case "COMPLETED":
-      return "已完成";
-    case "NEEDS_REVIEW":
-      return "需要复习";
-    default:
-      return status;
-  }
 }
 
 export function materialFileTypeLabel(type: MaterialFileType) {

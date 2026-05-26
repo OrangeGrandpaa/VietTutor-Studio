@@ -64,13 +64,6 @@ enum MaterialCategory {
   INTEGRATED
 }
 
-enum ProgressStatus {
-  NOT_STARTED
-  IN_PROGRESS
-  COMPLETED
-  NEEDS_REVIEW
-}
-
 model UserSession {
   id        String    @id @default(cuid())
   tokenHash String    @unique
@@ -179,22 +172,16 @@ model SpeakingFeedback {
 }
 
 model CourseMaterial {
-  id              String           @id @default(cuid())
-  title           String
-  fileName        String
-  filePath        String
-  mimeType        String?
-  fileType        MaterialFileType
-  category        MaterialCategory
-  note            String?
-  progressStatus  ProgressStatus   @default(NOT_STARTED)
-  progressPercent Int              @default(0)
-  currentPage     Int?
-  totalPages      Int?
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
+  id        String           @id @default(cuid())
+  title     String
+  fileName  String
+  filePath  String
+  mimeType  String?
+  fileType  MaterialFileType
+  category  MaterialCategory
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
 
   @@index([fileType, createdAt])
-  @@index([progressStatus])
   @@index([createdAt])
 }

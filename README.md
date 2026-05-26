@@ -1,6 +1,6 @@
 # VietTutor Studio
 
-VietTutor Studio 是一个面向越南语学习的私有教学工作台。它把作业上传、AI 结构化、逐题批阅、口语录音、课件进度和学习统计收在一个 Next.js 应用里，适合个人或小范围教学场景使用。
+VietTutor Studio 是一个面向越南语学习的私有教学工作台。它把作业上传、AI 结构化、逐题批阅、口语录音、课件库和学习统计收在一个 Next.js 应用里，适合个人或小范围教学场景使用。
 
 如果你是接手项目的人，建议先读本文件，再按需要查看：
 
@@ -142,7 +142,7 @@ Dashboard 汇总：
 - 写作平均正确率、口语平均分。
 - 最近写作和口语作业。
 - 正确率趋势。
-- 课件进度和连续学习天数。
+- 课件库统计和连续学习天数。
 
 核心数据入口是 `src/lib/dashboard/get-dashboard-data.ts`。
 
@@ -207,16 +207,7 @@ Dashboard 汇总：
 - Markdown / text
 - 图片、音频、视频
 
-文件保存到 `uploads/materials`。详情页会根据 MIME 类型内嵌预览图片、音频、视频和 PDF，其余类型提供下载。学习进度支持记录标题、备注、状态和当前页，完成百分比会根据当前页和系统识别到的课件总页数自动计算。
-
-课件总页数识别：
-
-- PDF 通过文件页对象计数识别页数。
-- PPTX 通过 Office 元数据识别幻灯片数。
-- DOCX 通过 Office 元数据识别页数；该值依赖文档保存时写入的元数据。
-- 图片按 1 页处理。
-- Markdown、纯文本按 1 页处理。
-- 音频、视频和无法读取页数的旧版 Office 二进制文件会保留为空，仍可记录当前学习位置。
+文件保存到 `uploads/materials`。详情页会根据 MIME 类型内嵌预览图片、音频、视频和 PDF，其余类型提供下载。课件库只记录标题、文件名、文件路径、MIME 类型、文件类型和课件分类，不再记录学习状态、学习进度、页数或备注。
 
 ### Protected Files
 
@@ -241,13 +232,14 @@ download=1      # 可选，强制下载
 
 - `/api/files/[id]` 使用流式返回，避免大文件一次性读入服务器内存。
 - 支持 HTTP `Range` 请求，音频、视频、PDF 预览可以按需读取片段。
+- 文件响应带有 `ETag` 和 `Last-Modified`，重复打开课件预览时浏览器可复用缓存。
 - 文件查询只读取路径、文件名和 MIME 类型等必要字段，不加载作业原文等大字段。
 
 ## Performance Notes
 
 - 作业和课件列表使用分页，每页默认 20 条记录。
 - Dashboard 统计使用数据库 `count`、`aggregate` 和 `groupBy`，避免全量加载历史记录后再计算。
-- Prisma schema 为作业类型/状态/创建时间、课件类型/创建时间、课件进度状态建立了索引。
+- Prisma schema 为作业类型/状态/创建时间、课件类型/创建时间建立了索引。
 
 ## AI And Extraction
 
@@ -283,7 +275,7 @@ Fallback 在 `src/lib/ai/fallback.ts`：
 - `SpeakingUnit`：口语朗读单元。
 - `Recording`：口语录音文件。
 - `SpeakingFeedback`：口语录音批阅。
-- `CourseMaterial`：课件、学习进度、当前页和自动识别的总页数。
+- `CourseMaterial`：课件文件、类型和分类。
 
 SQLite 文件默认位置：
 
@@ -394,7 +386,7 @@ cd /var/www/VietTutor-Studio
 bash scripts/deploy.sh --with-db-push
 ```
 
-2026-05-24 的课件进度更新新增了 `CourseMaterial.totalPages`，部署该版本需要使用 `--with-db-push`。2026-05-25 的性能优化新增了 Prisma 索引，也需要使用 `--with-db-push`。
+2026-05-25 的性能优化新增了 Prisma 索引，需要使用 `--with-db-push`。2026-05-26 的课件库精简移除了课件进度、状态、页数和备注字段，也需要使用 `--with-db-push`。
 
 发布脚本会执行：
 

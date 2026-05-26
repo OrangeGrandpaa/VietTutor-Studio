@@ -14,7 +14,7 @@ export default async function LoginPage() {
         <section className="space-y-6">
           <h1 className="font-serif text-6xl leading-none text-foreground/95">欢迎进入Zack的语言学习空间</h1>
           <p className="max-w-2xl text-lg text-muted-foreground">
-            通过作业、录音、课件库，将学习进度沉淀成可持续追踪的数据。
+            通过作业、录音、课件库，将学习过程沉淀成可持续查看的数据。
           </p>
         </section>
         <div className="flex justify-center lg:justify-end">

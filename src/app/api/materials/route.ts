@@ -4,7 +4,6 @@ import { NextRequest } from "next/server";
 import { logAuditEvent } from "@/lib/audit/log";
 import { ensureAuthenticatedApi } from "@/lib/auth/session";
 import { prisma } from "@/lib/db/prisma";
-import { detectMaterialTotalPages } from "@/lib/materials/page-count";
 import { deleteFile, saveUploadedFile, StorageValidationError } from "@/lib/storage";
 import { getMaxUploadSizeBytes } from "@/lib/utils/env";
 import { jsonError, jsonOk } from "@/lib/utils/http";
@@ -171,14 +170,6 @@ export async function POST(request: NextRequest) {
 
     const title =
       sanitizeOptionalText(formData.get("title")?.toString()) ?? file.name.replace(/\.[^.]+$/, "");
-    const totalPages = await detectMaterialTotalPages({
-      absolutePath: saved.absolutePath,
-      fileName: file.name,
-      mimeType: saved.mimeType
-    }).catch((error) => {
-      console.warn("[materials.upload] failed to detect total pages", error);
-      return null;
-    });
 
     const material = await prisma.courseMaterial.create({
       data: {
@@ -187,9 +178,7 @@ export async function POST(request: NextRequest) {
         filePath: saved.relativePath,
         mimeType: saved.mimeType,
         fileType: inferMaterialFileType(file.name, saved.mimeType),
-        category: mapMaterialCategory(formData.get("category")?.toString() ?? "INTEGRATED"),
-        note: sanitizeOptionalText(formData.get("note")?.toString()),
-        totalPages
+        category: mapMaterialCategory(formData.get("category")?.toString() ?? "INTEGRATED")
       }
     });
 

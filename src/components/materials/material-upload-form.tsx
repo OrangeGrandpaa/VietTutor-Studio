@@ -9,7 +9,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
 
 const categories = [
   ["PRONUNCIATION", "\u53d1\u97f3"],
@@ -112,7 +111,7 @@ export function MaterialUploadForm() {
             <Input id="material-title" name="title" placeholder="例如：第 5 课听力材料" />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="material-category">学习阶段</Label>
+            <Label htmlFor="material-category">课件分类</Label>
             <Select id="material-category" name="category" defaultValue="INTEGRATED">
               {categories.map(([value, label]) => (
                 <option key={value} value={value}>
@@ -120,10 +119,6 @@ export function MaterialUploadForm() {
                 </option>
               ))}
             </Select>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="material-note">备注</Label>
-            <Textarea id="material-note" name="note" placeholder="记录老师要求或学习重点" />
           </div>
           <Button type="submit" disabled={loading}>
             {loading ? "上传中..." : "上传课件"}

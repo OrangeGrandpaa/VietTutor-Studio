@@ -144,12 +144,22 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   const range = parseRange(request.headers.get("range"), file.size);
   const mimeType = record.mimeType || "application/octet-stream";
   const disposition = `${download ? "attachment" : "inline"}; filename="${encodeURIComponent(record.fileName)}"`;
+  const etag = `"${file.size}-${file.mtimeMs}"`;
   const baseHeaders = {
     "Accept-Ranges": "bytes",
-    "Cache-Control": "private, max-age=300",
+    "Cache-Control": "private, max-age=3600",
     "Content-Disposition": disposition,
-    "Content-Type": mimeType
+    "Content-Type": mimeType,
+    "ETag": etag,
+    "Last-Modified": file.lastModified
   };
+
+  if (!range && request.headers.get("if-none-match") === etag) {
+    return new Response(null, {
+      status: 304,
+      headers: baseHeaders
+    });
+  }
 
   if (range === "invalid") {
     return new Response(null, {
@@ -176,7 +186,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   return new Response(streamFile(file.absolutePath, null), {
     headers: {
       ...baseHeaders,
-      "Content-Length": String(file.size),
+      "Content-Length": String(file.size)
     }
   });
 }

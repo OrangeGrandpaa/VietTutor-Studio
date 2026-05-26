@@ -11,21 +11,19 @@ import { Badge } from "@/components/ui/badge";
 import { PaginationControls } from "@/components/ui/pagination-controls";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
 import { requireAuth } from "@/lib/auth/session";
 import { prisma } from "@/lib/db/prisma";
 import {
   formatDateTime,
   materialCategoryLabel,
-  materialFileTypeLabel,
-  progressStatusLabel
+  materialFileTypeLabel
 } from "@/lib/utils/format";
 import { getPagination } from "@/lib/utils/pagination";
 
 const TEXT = {
   pageTitle: "\u8bfe\u4ef6\u5e93",
   pageDescription:
-    "\u7edf\u4e00\u7ba1\u7406 PDF\u3001Word\u3001PowerPoint\u3001Markdown\u3001\u56fe\u7247\u3001\u97f3\u9891\u548c\u89c6\u9891\uff0c\u5e76\u8bb0\u5f55\u5b66\u4e60\u8fdb\u5ea6\u3002",
+    "\u7edf\u4e00\u7ba1\u7406 PDF\u3001Word\u3001PowerPoint\u3001Markdown\u3001\u56fe\u7247\u3001\u97f3\u9891\u548c\u89c6\u9891\u8bfe\u4ef6\u3002",
   uploadMaterial: "\u4e0a\u4f20\u8bfe\u4ef6",
   all: "\u5168\u90e8",
   image: "\u56fe\u7247",
@@ -34,31 +32,11 @@ const TEXT = {
   other: "\u5176\u4ed6",
   emptyTitle: "\u8fd8\u6ca1\u6709\u8bfe\u4ef6",
   emptyDescription:
-    "\u4e0a\u4f20 PDF\u3001Markdown \u6216\u97f3\u89c6\u9891\u8bfe\u4ef6\uff0c\u5e76\u8bb0\u5f55\u4f60\u7684\u5b66\u4e60\u4f4d\u7f6e\u3002",
+    "\u4e0a\u4f20 PDF\u3001Markdown \u6216\u97f3\u89c6\u9891\u8bfe\u4ef6\uff0c\u8ba9\u6750\u6599\u7edf\u4e00\u7ba1\u7406\u548c\u9884\u89c8\u3002",
   firstUpload: "\u4e0a\u4f20\u7b2c\u4e00\u4efd\u8bfe\u4ef6",
-  learningProgress: "\u5b66\u4e60\u8fdb\u5ea6",
-  recentPosition: "\u6700\u8fd1\u4f4d\u7f6e\uff1a",
-  learnedPage: "\u7b2c {page} \u9875",
-  learnedPageWithTotal: "\u7b2c {page} / {total} \u9875",
-  notRecorded: "\u672a\u8bb0\u5f55",
-  note: "\u5907\u6ce8\uff1a",
-  noNote: "\u6682\u65e0\u5907\u6ce8",
+  uploadedAt: "\u4e0a\u4f20\u65f6\u95f4\uff1a",
   view: "\u67e5\u770b"
 } as const;
-
-function formatRecentPosition(currentPage: number | null, totalPages: number | null) {
-  if (!currentPage) {
-    return TEXT.notRecorded;
-  }
-
-  if (totalPages) {
-    return TEXT.learnedPageWithTotal
-      .replace("{page}", String(currentPage))
-      .replace("{total}", String(totalPages));
-  }
-
-  return TEXT.learnedPage.replace("{page}", String(currentPage));
-}
 
 function buildMaterialsHref(type: string | undefined, page = 1) {
   const params = new URLSearchParams();
@@ -98,11 +76,6 @@ export default async function MaterialsPage({
       title: true,
       fileType: true,
       category: true,
-      progressStatus: true,
-      progressPercent: true,
-      currentPage: true,
-      totalPages: true,
-      note: true,
       createdAt: true
     }
   });
@@ -157,27 +130,15 @@ export default async function MaterialsPage({
                     <div className="flex flex-wrap items-center gap-2">
                       <Badge variant="outline">{materialFileTypeLabel(material.fileType)}</Badge>
                       <Badge variant="outline">{materialCategoryLabel(material.category)}</Badge>
-                      <Badge variant="outline">{progressStatusLabel(material.progressStatus)}</Badge>
                     </div>
                     <p className="text-sm text-muted-foreground">{formatDateTime(material.createdAt)}</p>
-                  </div>
-                  <div className="min-w-44 space-y-2">
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">{TEXT.learningProgress}</span>
-                      <span>{material.progressPercent}%</span>
-                    </div>
-                    <Progress value={material.progressPercent} />
                   </div>
                 </CardHeader>
                 <CardContent className="flex flex-wrap items-center justify-between gap-4">
                   <div className="space-y-1 text-sm text-muted-foreground">
                     <p>
-                      {TEXT.recentPosition}
-                      {formatRecentPosition(material.currentPage, material.totalPages)}
-                    </p>
-                    <p>
-                      {TEXT.note}
-                      {material.note ?? TEXT.noNote}
+                      {TEXT.uploadedAt}
+                      {formatDateTime(material.createdAt)}
                     </p>
                   </div>
                   <div className="flex flex-wrap gap-2">

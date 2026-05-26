@@ -77,8 +77,8 @@ export default async function DashboardPage() {
                 <p className="mt-2 font-serif text-4xl">{data.achievements.recordingsCount}</p>
               </div>
               <div className="rounded-2xl bg-secondary/60 p-4">
-                <p className="text-sm text-muted-foreground">完成课件</p>
-                <p className="mt-2 font-serif text-4xl">{data.achievements.completedMaterials}</p>
+                <p className="text-sm text-muted-foreground">课件数量</p>
+                <p className="mt-2 font-serif text-4xl">{data.achievements.materialsCount}</p>
               </div>
               <div className="rounded-2xl bg-secondary/60 p-4">
                 <p className="text-sm text-muted-foreground">最高正确率</p>
@@ -104,20 +104,20 @@ export default async function DashboardPage() {
         <section className="grid gap-4 md:grid-cols-4">
           <Card className="md:col-span-2">
             <CardHeader>
-              <CardTitle>课件进度</CardTitle>
+              <CardTitle>课件库</CardTitle>
             </CardHeader>
             <CardContent className="grid gap-4 sm:grid-cols-3">
               <div className="rounded-2xl border border-border/70 p-4">
-                <p className="text-sm text-muted-foreground">学习中</p>
-                <p className="mt-2 text-3xl font-semibold">{data.materials.inProgress}</p>
+                <p className="text-sm text-muted-foreground">总课件</p>
+                <p className="mt-2 text-3xl font-semibold">{data.materials.total}</p>
               </div>
               <div className="rounded-2xl border border-border/70 p-4">
-                <p className="text-sm text-muted-foreground">已完成</p>
-                <p className="mt-2 text-3xl font-semibold">{data.materials.completed}</p>
+                <p className="text-sm text-muted-foreground">PDF / Word</p>
+                <p className="mt-2 text-3xl font-semibold">{data.materials.pdf + data.materials.word}</p>
               </div>
               <div className="rounded-2xl border border-border/70 p-4">
-                <p className="text-sm text-muted-foreground">需要复习</p>
-                <p className="mt-2 text-3xl font-semibold">{data.materials.needsReview}</p>
+                <p className="text-sm text-muted-foreground">音视频/图片</p>
+                <p className="mt-2 text-3xl font-semibold">{data.materials.media}</p>
               </div>
             </CardContent>
           </Card>
@@ -126,8 +126,8 @@ export default async function DashboardPage() {
               <CardTitle>当前节奏</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3 text-sm text-muted-foreground">
-              <p>平均课件完成度：{formatPercent(data.materials.averageProgress)}</p>
-              <p>正确率趋势和课件进度会继续累积，计划扩展：学习日历、词汇本和错题本模块。</p>
+              <p>PowerPoint 课件：{data.materials.powerpoint} 份。</p>
+              <p>正确率趋势和课件库会继续累积，计划扩展：学习日历、词汇本和错题本模块。</p>
             </CardContent>
           </Card>
         </section>
