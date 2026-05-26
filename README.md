@@ -73,6 +73,8 @@ KIMI_API_KEY=""
 KIMI_BASE_URL="https://api.moonshot.ai/v1"
 KIMI_MODEL="moonshot-v1-8k"
 KIMI_MAX_TOKENS="8192"
+KIMI_REQUEST_TIMEOUT_MS="600000"
+KIMI_MAX_RETRIES="1"
 MAX_UPLOAD_SIZE_MB="20"
 PROTECTED_FILE_ACCEL_REDIRECT_PREFIX=""
 ```
@@ -83,6 +85,8 @@ PROTECTED_FILE_ACCEL_REDIRECT_PREFIX=""
 - `SESSION_SECRET` 必须是强随机字符串，生产环境不要复用示例值。
 - `KIMI_API_KEY` 为空时，依赖 Kimi 的上传或结构化路径会失败。
 - `KIMI_MAX_TOKENS` 控制结构化输出 token 上限。生产可按模型能力调高，例如 `16384`。
+- `KIMI_REQUEST_TIMEOUT_MS` 控制每次 Kimi HTTP 请求等待上游响应的超时时间，默认 600000ms。
+- `KIMI_MAX_RETRIES` 控制 Kimi 瞬时网络/上游超时错误的重试次数，默认 1 次。
 - `MAX_UPLOAD_SIZE_MB` 控制所有受保护上传的最大文件大小。
 - `PROTECTED_FILE_ACCEL_REDIRECT_PREFIX` 可选。生产 Nginx 配好内部文件位置后设为 `"/_protected_uploads/"`，让 Next.js 只做鉴权，实际文件传输交给 Nginx。
 
@@ -461,6 +465,7 @@ HTTPS 当前使用手动部署的阿里云个人测试证书，路径见 `PRODUC
 - 老服务名 `viettutor.service` 曾造成 3000 端口冲突，排障时注意是否有遗留服务。
 - `certbot` 在当前环境验证不稳定，现有 HTTPS 路径是手动部署阿里云证书。
 - Kimi `finish_reason=length` 通常意味着结构化输出被截断，可调高 `KIMI_MAX_TOKENS` 或接受 fallback。
+- Kimi `UND_ERR_HEADERS_TIMEOUT` / `HeadersTimeoutError` 表示请求已发出但上游长时间没有返回响应头，通常是上游排队、模型响应慢、网络抖动或输入过长；可适当增大 `KIMI_REQUEST_TIMEOUT_MS` 和 `KIMI_MAX_RETRIES`。
 - `.env`、`prisma/dev.db` 和 `uploads/` 都是服务器本地状态，不应该提交到 Git。
 - 部署后旧页面提交可能出现 `Failed to find Server Action`，通常刷新浏览器即可。
 - 写作上传虽已后台结构化，但复杂文件的 Kimi Files API 文本抽取仍可能比纯文本慢。

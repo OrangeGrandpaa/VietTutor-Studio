@@ -1,5 +1,6 @@
 import "server-only";
 
+import { Agent, type Dispatcher } from "undici";
 import { z } from "zod";
 
 import { speakingAssignmentStructurePrompt } from "@/prompts/speaking-assignment-structure.prompt";
@@ -8,8 +9,13 @@ import { getEnv } from "@/lib/utils/env";
 import type { SpeakingStructuredContent, WritingStructuredContent } from "@/types/assignment";
 
 const DEFAULT_STRUCTURED_OUTPUT_MAX_TOKENS = 8192;
+const DEFAULT_KIMI_REQUEST_TIMEOUT_MS = 600000;
+const DEFAULT_KIMI_MAX_RETRIES = 1;
 const KIMI_FILE_EXTRACTION_MAX_POLLS = 10;
 const KIMI_FILE_EXTRACTION_POLL_INTERVAL_MS = 1200;
+
+let kimiDispatcher: Agent | null = null;
+let kimiDispatcherTimeoutMs = 0;
 
 const writingSchema = z.object({
   title: z.string().default("未命名笔头作业"),
@@ -56,6 +62,37 @@ function getStructuredOutputMaxTokens() {
   return Number.isFinite(configured) && configured > 0
     ? Math.floor(configured)
     : DEFAULT_STRUCTURED_OUTPUT_MAX_TOKENS;
+}
+
+function getPositiveIntegerEnv(name: string, fallback: number) {
+  const configured = Number(process.env[name] ?? fallback);
+  return Number.isFinite(configured) && configured > 0 ? Math.floor(configured) : fallback;
+}
+
+function getNonNegativeIntegerEnv(name: string, fallback: number) {
+  const configured = Number(process.env[name] ?? fallback);
+  return Number.isFinite(configured) && configured >= 0 ? Math.floor(configured) : fallback;
+}
+
+function getKimiRequestTimeoutMs() {
+  return getPositiveIntegerEnv("KIMI_REQUEST_TIMEOUT_MS", DEFAULT_KIMI_REQUEST_TIMEOUT_MS);
+}
+
+function getKimiMaxRetries() {
+  return getNonNegativeIntegerEnv("KIMI_MAX_RETRIES", DEFAULT_KIMI_MAX_RETRIES);
+}
+
+function getKimiDispatcher(timeoutMs: number) {
+  if (!kimiDispatcher || kimiDispatcherTimeoutMs !== timeoutMs) {
+    kimiDispatcher = new Agent({
+      connectTimeout: Math.min(timeoutMs, 30000),
+      headersTimeout: timeoutMs,
+      bodyTimeout: timeoutMs
+    });
+    kimiDispatcherTimeoutMs = timeoutMs;
+  }
+
+  return kimiDispatcher;
 }
 
 function getKimiConfig() {
@@ -116,6 +153,84 @@ function delay(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+function readErrorCode(error: unknown): string | undefined {
+  if (!error || typeof error !== "object") {
+    return undefined;
+  }
+
+  const code = (error as { code?: unknown }).code;
+  if (typeof code === "string") {
+    return code;
+  }
+
+  return readErrorCode((error as { cause?: unknown }).cause);
+}
+
+function isTransientKimiFetchError(error: unknown) {
+  const code = readErrorCode(error);
+  if (
+    code &&
+    [
+      "UND_ERR_HEADERS_TIMEOUT",
+      "UND_ERR_BODY_TIMEOUT",
+      "UND_ERR_CONNECT_TIMEOUT",
+      "UND_ERR_SOCKET",
+      "ECONNRESET",
+      "ECONNREFUSED",
+      "ETIMEDOUT",
+      "EAI_AGAIN"
+    ].includes(code)
+  ) {
+    return true;
+  }
+
+  return error instanceof TypeError && error.message === "fetch failed";
+}
+
+async function fetchKimi(operation: string, url: string, init: RequestInit) {
+  const timeoutMs = getKimiRequestTimeoutMs();
+  const maxRetries = getKimiMaxRetries();
+  let lastError: unknown;
+
+  for (let attempt = 0; attempt <= maxRetries; attempt += 1) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), timeoutMs);
+    let retryDelayMs = 0;
+
+    try {
+      return await fetch(url, {
+        ...init,
+        signal: controller.signal,
+        dispatcher: getKimiDispatcher(timeoutMs)
+      } as RequestInit & { dispatcher: Dispatcher });
+    } catch (error) {
+      lastError = error;
+
+      const abortedByLocalTimeout = controller.signal.aborted;
+      const canRetry = attempt < maxRetries && (abortedByLocalTimeout || isTransientKimiFetchError(error));
+
+      if (!canRetry) {
+        const attemptText = maxRetries > 0 ? `，已尝试 ${attempt + 1}/${maxRetries + 1} 次` : "";
+        const reason = abortedByLocalTimeout
+          ? `请求超过 ${timeoutMs}ms 未完成`
+          : "网络或上游服务未及时返回";
+
+        throw new Error(`Kimi ${operation} 请求失败：${reason}${attemptText}。`, { cause: error });
+      }
+
+      retryDelayMs = Math.min(1000 * 2 ** attempt, 5000);
+    } finally {
+      clearTimeout(timeout);
+    }
+
+    if (retryDelayMs > 0) {
+      await delay(retryDelayMs);
+    }
+  }
+
+  throw new Error(`Kimi ${operation} 请求失败。`, { cause: lastError });
+}
+
 type KimiFileMetadata = {
   id: string;
   status?: string;
@@ -123,7 +238,7 @@ type KimiFileMetadata = {
 
 async function fetchKimiFileMetadata(fileId: string) {
   const { apiKey, baseUrl } = getKimiConfig();
-  const response = await fetch(`${baseUrl}/files/${fileId}`, {
+  const response = await fetchKimi("Files metadata", `${baseUrl}/files/${fileId}`, {
     method: "GET",
     headers: {
       Authorization: `Bearer ${apiKey}`
@@ -141,7 +256,7 @@ async function fetchKimiFileMetadata(fileId: string) {
 
 async function fetchKimiFileContent(fileId: string) {
   const { apiKey, baseUrl } = getKimiConfig();
-  const response = await fetch(`${baseUrl}/files/${fileId}/content`, {
+  const response = await fetchKimi("Files content", `${baseUrl}/files/${fileId}/content`, {
     method: "GET",
     headers: {
       Authorization: `Bearer ${apiKey}`
@@ -165,7 +280,7 @@ export async function extractTextWithKimiFilesApi(file: File) {
   formData.append("file", file, file.name);
   formData.append("purpose", "file-extract");
 
-  const uploadResponse = await fetch(`${baseUrl}/files`, {
+  const uploadResponse = await fetchKimi("Files upload", `${baseUrl}/files`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${apiKey}`
@@ -215,7 +330,7 @@ export async function callKimiModel(prompt: string, input: string) {
   const { apiKey, baseUrl, model } = getKimiConfig();
   const maxTokens = getStructuredOutputMaxTokens();
 
-  const response = await fetch(`${baseUrl}/chat/completions`, {
+  const response = await fetchKimi("Chat Completions", `${baseUrl}/chat/completions`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",

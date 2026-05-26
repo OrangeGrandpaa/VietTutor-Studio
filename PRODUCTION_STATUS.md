@@ -98,6 +98,7 @@ Writing assignment detail page:
 AI configuration:
 
 - `KIMI_MAX_TOKENS` is configurable in the server `.env`.
+- `KIMI_REQUEST_TIMEOUT_MS` and `KIMI_MAX_RETRIES` are configurable in the server `.env` for slow upstream responses or transient Kimi network failures.
 - The user intended to set production to `KIMI_MAX_TOKENS="16384"` after seeing length-limited Kimi responses.
 - `.env` is server-local and is not committed to Git.
 
@@ -202,7 +203,8 @@ The script installs dependencies from `package-lock.json`, builds the app, and r
 - `certbot` validation was unreliable in this environment; the stable HTTPS path is manual Alibaba Cloud certificate deployment.
 - Nginx `504 Gateway Time-out` during writing upload usually means the upstream Next.js request exceeded proxy timeout, often because AI structuring was blocking the response.
 - Browser-side `Failed to find Server Action` logs can occur after deployments when an old page submits against a newer build; refreshing the browser usually clears it.
-- `KIMI_MAX_TOKENS` changes require editing the server `.env` and restarting `vietutor-studio`.
+- Kimi `HeadersTimeoutError` / `UND_ERR_HEADERS_TIMEOUT` means the upstream did not return response headers in time; it is normally not a document-format issue. Tune `KIMI_REQUEST_TIMEOUT_MS` / `KIMI_MAX_RETRIES` and restart `vietutor-studio`.
+- Kimi `.env` changes such as `KIMI_MAX_TOKENS`, `KIMI_REQUEST_TIMEOUT_MS`, or `KIMI_MAX_RETRIES` require restarting `vietutor-studio`.
 
 ## Verification
 
