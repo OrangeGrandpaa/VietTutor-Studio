@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
 
+import { AutoResizeTextarea } from "@/components/ui/auto-resize-textarea";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
@@ -62,7 +63,7 @@ function splitPrompt(prompt: string): PromptPart[] {
 
 function parseInitialAnswers(initialAnswer: string, blankCount: number) {
   if (blankCount === 0) {
-    return [];
+    return [initialAnswer];
   }
 
   try {
@@ -165,11 +166,22 @@ export function WritingAnswerEditor({
         })}
       </div>
 
-      {blankCount > 0 ? (
-        <Button type="button" variant="outline" disabled={saving || !isDirty} onClick={saveAnswer}>
-          {saving ? "保存中..." : isDirty ? "保存答案" : "答案已保存"}
-        </Button>
+      {blankCount === 0 ? (
+        <div className="space-y-2">
+          <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">学生答案</p>
+          <AutoResizeTextarea
+            aria-label="学生答案"
+            className="text-base leading-7"
+            placeholder="在这里输入答案"
+            value={answers[0] ?? ""}
+            onChange={(event) => setAnswers([event.target.value])}
+          />
+        </div>
       ) : null}
+
+      <Button type="button" variant="outline" disabled={saving || !isDirty} onClick={saveAnswer}>
+        {saving ? "保存中..." : isDirty ? "保存答案" : "答案已保存"}
+      </Button>
     </div>
   );
 }

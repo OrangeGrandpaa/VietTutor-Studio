@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-05-28
+
+### Changed
+
+- Added a student-answer textarea for writing questions that do not contain `______` inline blanks, while keeping inline blank inputs for fill-in-the-blank questions.
+
 ## 2026-05-26
 
 ### Changed

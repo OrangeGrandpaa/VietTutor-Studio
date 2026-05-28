@@ -83,6 +83,7 @@ Writing assignment upload:
 Writing assignment detail page:
 
 - Question `______` blanks render as inline answer inputs that start at the blank width and expand with typed content.
+- Questions without `______` blanks show a student-answer textarea so every question can accept an answer.
 - The old separate student-answer textarea is not shown on fill-in-the-blank questions.
 - Saving inline answers clears existing review feedback for that question so stale feedback is not reused.
 - Review textareas start at one-line height and grow with entered content.
