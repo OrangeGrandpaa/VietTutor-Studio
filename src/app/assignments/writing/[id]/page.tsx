@@ -42,6 +42,7 @@ export default async function WritingAssignmentDetailPage({
   }
 
   const { groups, stats } = buildWritingReviewGroups(assignment.sections, assignment.aiStructuredContent);
+  const shouldShowQuestions = assignment.aiStatus === "SUCCEEDED";
   const wrongQuestionCount = groups.reduce(
     (total, group) => total + group.questions.filter((question) => question.isCorrect === false).length,
     0
@@ -53,7 +54,11 @@ export default async function WritingAssignmentDetailPage({
   return (
     <AppShell
       title={assignment.title}
-      description={`上传于 ${formatDateTime(assignment.createdAt)}，已拆成 ${stats.totalQuestions} 道题供逐题作答和批阅。`}
+      description={
+        shouldShowQuestions
+          ? `上传于 ${formatDateTime(assignment.createdAt)}，已拆成 ${stats.totalQuestions} 道题供逐题作答和批阅。`
+          : `上传于 ${formatDateTime(assignment.createdAt)}，AI 正在结构化题目，完成后会显示逐题作答和批阅区域。`
+      }
       actions={
         <>
           {assignment.aiStatus === "FAILED" ? (
@@ -76,14 +81,20 @@ export default async function WritingAssignmentDetailPage({
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex flex-wrap items-center gap-3">
             <AssignmentStatusBadge status={assignment.status} aiStatus={assignment.aiStatus} />
-            <Badge variant="outline">总题数 {stats.totalQuestions}</Badge>
-            <Badge variant="outline">已批阅 {stats.reviewedQuestions}</Badge>
-            <Badge variant="outline">整体准确率 {formatPercent(stats.accuracy)}</Badge>
-            <Badge variant="outline">错题 {wrongQuestionCount}</Badge>
+            {shouldShowQuestions ? (
+              <>
+                <Badge variant="outline">总题数 {stats.totalQuestions}</Badge>
+                <Badge variant="outline">已批阅 {stats.reviewedQuestions}</Badge>
+                <Badge variant="outline">整体准确率 {formatPercent(stats.accuracy)}</Badge>
+                <Badge variant="outline">错题 {wrongQuestionCount}</Badge>
+              </>
+            ) : null}
           </div>
-          <Link href={wrongOnlyHref} className={buttonVariants({ variant: wrongOnly ? "default" : "outline" })}>
-            {wrongOnly ? "显示全部" : "只看错题"}
-          </Link>
+          {shouldShowQuestions ? (
+            <Link href={wrongOnlyHref} className={buttonVariants({ variant: wrongOnly ? "default" : "outline" })}>
+              {wrongOnly ? "显示全部" : "只看错题"}
+            </Link>
+          ) : null}
         </div>
 
         {assignment.aiStatus === "PENDING" ? (
@@ -93,7 +104,7 @@ export default async function WritingAssignmentDetailPage({
             </CardHeader>
             <CardContent className="flex flex-wrap items-center justify-between gap-4">
               <p className="max-w-2xl text-sm leading-6 text-foreground/80">
-                当前先展示基础拆分结果。AI 完成后，点击刷新状态即可看到更新后的题目结构。
+                为避免基础拆分误导，当前暂不展示题目。AI 完成结构化后，点击刷新状态即可看到逐题作答和批阅区域。
               </p>
               <RefreshAssignmentButton />
             </CardContent>
@@ -111,13 +122,15 @@ export default async function WritingAssignmentDetailPage({
           </Card>
         ) : null}
 
-        <div className="grid gap-6 xl:grid-cols-[1.35fr_0.65fr]">
-          <div className="space-y-6">
-            <WritingQuestionGroups assignmentId={assignment.id} groups={groups} wrongOnly={wrongOnly} />
-          </div>
+        {shouldShowQuestions ? (
+          <div className="grid gap-6 xl:grid-cols-[1.35fr_0.65fr]">
+            <div className="space-y-6">
+              <WritingQuestionGroups assignmentId={assignment.id} groups={groups} wrongOnly={wrongOnly} />
+            </div>
 
-          <WritingReviewPanel groups={groups} stats={stats} />
-        </div>
+            <WritingReviewPanel groups={groups} stats={stats} />
+          </div>
+        ) : null}
       </PageShell>
     </AppShell>
   );

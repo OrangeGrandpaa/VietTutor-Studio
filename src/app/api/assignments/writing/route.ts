@@ -1,7 +1,6 @@
 import { AssignmentStatus, AssignmentType, Prisma } from "@prisma/client";
 import { after, NextRequest } from "next/server";
 
-import { buildWritingFallback } from "@/lib/ai/fallback";
 import { structureWritingAssignment } from "@/lib/ai/kimi";
 import { flattenWritingQuestions } from "@/lib/assignment/writing";
 import {
@@ -97,14 +96,14 @@ function buildSectionRows(assignmentId: string, questions: ReturnType<typeof fla
   }));
 }
 
-function isKimiLengthLimitError(error: unknown) {
-  return error instanceof Error && error.message.includes("finish_reason=length");
-}
-
-async function runWritingStructureJob(assignmentId: string, originalContent: string, fallbackTitle: string) {
+async function runWritingStructureJob(assignmentId: string, originalContent: string, initialTitle: string) {
   try {
     const structured = await structureWritingAssignment(originalContent);
     const questions = flattenWritingQuestions(structured);
+
+    if (questions.length === 0) {
+      throw new Error("AI 结构化没有识别到可展示题目。");
+    }
 
     await prisma.$transaction(async (tx) => {
       const assignment = await tx.assignment.findUnique({
@@ -140,7 +139,7 @@ async function runWritingStructureJob(assignmentId: string, originalContent: str
       await tx.assignment.update({
         where: { id: assignmentId },
         data: {
-          title: structured.title || fallbackTitle,
+          title: structured.title || initialTitle,
           aiStructuredContent: structured as unknown as Prisma.InputJsonValue,
           aiStatus: "SUCCEEDED",
           aiErrorMessage: null,
@@ -159,22 +158,6 @@ async function runWritingStructureJob(assignmentId: string, originalContent: str
     logger.info("assignments.writing.structure_job.succeeded", { assignmentId });
   } catch (error) {
     const message = formatErrorForDisplay(error);
-
-    if (isKimiLengthLimitError(error)) {
-      await prisma.assignment.update({
-        where: { id: assignmentId },
-        data: {
-          aiStatus: "SUCCEEDED",
-          aiErrorMessage: null
-        }
-      });
-
-      logger.warn("assignments.writing.structure_job.used_fallback_after_length_limit", {
-        assignmentId,
-        message
-      });
-      return;
-    }
 
     await prisma.assignment.update({
       where: { id: assignmentId },
@@ -230,9 +213,7 @@ export async function POST(request: NextRequest) {
     });
     savedRelativePath = savedFile.relativePath;
 
-    const fallbackStructured = buildWritingFallback(extracted.text);
-    const fallbackQuestions = flattenWritingQuestions(fallbackStructured);
-    const title = customTitle ?? fallbackStructured.title ?? file.name.replace(/\.[^.]+$/, "");
+    const title = customTitle ?? file.name.replace(/\.[^.]+$/, "");
 
     const assignment = await prisma.$transaction(async (tx) => {
       const created = await tx.assignment.create({
@@ -243,18 +224,11 @@ export async function POST(request: NextRequest) {
           originalFilePath: savedFile.relativePath,
           originalMimeType: savedFile.mimeType,
           originalContent: extracted.text,
-          aiStructuredContent: fallbackStructured as unknown as Prisma.InputJsonValue,
           aiStatus: "PENDING",
           aiErrorMessage: null,
           status: AssignmentStatus.PENDING_REVIEW
         }
       });
-
-      if (fallbackQuestions.length > 0) {
-        await tx.assignmentSection.createMany({
-          data: buildSectionRows(created.id, fallbackQuestions)
-        });
-      }
 
       return created;
     });

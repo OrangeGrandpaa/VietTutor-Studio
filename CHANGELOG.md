@@ -5,6 +5,7 @@
 ### Changed
 
 - Added a student-answer textarea for writing questions that do not contain `______` inline blanks, while keeping inline blank inputs for fill-in-the-blank questions.
+- Changed new writing uploads to hide the local basic split and show questions only after AI structuring succeeds.
 
 ## 2026-05-26
 

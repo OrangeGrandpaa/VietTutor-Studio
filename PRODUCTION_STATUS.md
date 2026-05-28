@@ -76,12 +76,14 @@ Writing assignment upload:
 
 - Uploads should return quickly and enter the assignment detail page.
 - Kimi document structuring runs after upload.
-- While structuring is still pending, the detail page shows a pending notice and a manual refresh button.
+- New writing uploads do not save or display the local fallback/basic split.
+- While structuring is still pending, the detail page shows only a pending notice and a manual refresh button.
 - Automatic polling is intentionally not enabled.
-- If Kimi returns `finish_reason=length`, the app accepts the fallback structure and records the truncation note instead of blocking the upload.
+- If Kimi returns `finish_reason=length`, the writing assignment shows the AI failure reason and can be retried after token/config changes.
 
 Writing assignment detail page:
 
+- Questions, wrong-answer filtering, and the overall review panel are shown only after AI structuring succeeds.
 - Question `______` blanks render as inline answer inputs that start at the blank width and expand with typed content.
 - Questions without `______` blanks show a student-answer textarea so every question can accept an answer.
 - The old separate student-answer textarea is not shown on fill-in-the-blank questions.
@@ -94,7 +96,7 @@ Writing assignment detail page:
 - The explicit `未批阅` status badge was removed from the overall review cards.
 - Redundant cards for question filtering and original upload summary are not shown.
 - AI structuring failures show fuller error details when available, including nested `cause` information.
-- AI structuring and fallback normalization remove blank lines inside a single question and keep assignment/part names in Chinese.
+- AI structuring removes blank lines inside a single question and keeps assignment/part names in Chinese.
 
 AI configuration:
 

@@ -312,6 +312,6 @@ tail -n 100 /var/log/nginx/error.log
 
 If upload requests return `504`, confirm `proxy_read_timeout` is high enough. Writing uploads now return quickly and run AI structuring in the background, but large PDF/PPT/Excel extraction can still take longer than simple text uploads.
 
-If Kimi structuring reports `finish_reason=length`, either increase `KIMI_MAX_TOKENS` in the server `.env` if the model supports it, or rely on the fallback structure retained by the app.
+If Kimi structuring reports `finish_reason=length`, increase `KIMI_MAX_TOKENS` in the server `.env` if the model supports it, restart the service, and use the writing detail page retry button. New writing uploads no longer show or retain the local basic split as the visible question structure.
 
 If Kimi structuring reports `UND_ERR_HEADERS_TIMEOUT` or `HeadersTimeoutError`, the request reached the upstream service but no response headers arrived before timeout. This is usually upstream queueing, slow model generation, network jitter, or very large input. Increase `KIMI_REQUEST_TIMEOUT_MS` and/or `KIMI_MAX_RETRIES`, then restart `vietutor-studio`.

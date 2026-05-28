@@ -170,17 +170,18 @@ Dashboard 汇总：
 
 1. 上传文件到 `uploads/assignments/writing`。
 2. 从文件抽取文本。
-3. 立即创建作业和 fallback 题目结构。
-4. 返回详情页，页面显示“AI 正在后台结构化”。
+3. 立即创建作业记录，但不创建基础拆分题目。
+4. 返回详情页，页面只显示“AI 正在后台结构化”和刷新按钮。
 5. 通过 Next.js `after()` 在后台调用 Kimi 重新结构化。
-6. 如果 AI 成功且用户还没有填写答案/批阅，则替换为 AI 结构。
-7. 如果 Kimi 返回 `finish_reason=length`，保留 fallback 结构并视为可继续使用。
+6. 如果 AI 成功，则写入 AI 识别出的题目结构并显示逐题作答和批阅区域。
+7. 如果 AI 失败，详情页只展示完整失败原因和重新调用 AI 按钮，不展示基础拆分结果。
 8. 用户逐题输入学生答案，再标记正确/错误和批注。
 
 重要行为：
 
 - 写作作业列表支持 `全部`、`已批阅`、`未批阅` 三种筛选。
 - AI 仍在后台结构化的作业会显示 `AI结构化中` 状态。
+- AI 未成功前，writing 详情页不展示基础拆分题目、错题筛选或右侧总体批阅面板。
 - AI 结构化失败时，详情页会展示完整错误信息，包括可用的底层 `cause` 字段。
 - 题目中的 `______` 会在详情页渲染为内联答案输入框，输入框初始宽度匹配下划线长度，并会随输入内容延长。
 - 没有 `______` 的题目会显示“学生答案”自适应文本框，供逐题输入答案。
@@ -188,7 +189,7 @@ Dashboard 汇总：
 - 批阅分数当前是二值逻辑：正确 `100`，错误 `0`。
 - 作业状态根据已批阅题数自动更新为 `PENDING_REVIEW`、`REVIEWING` 或 `REVIEWED`。
 - 详情页顶部支持“只看错题”，右侧总体批阅可跳转到对应题目分组。
-- AI 结构化和 fallback 会清理单道题目内部空行，并要求作业名称、部分名称使用中文概括。
+- AI 结构化会清理单道题目内部空行，并要求作业名称、部分名称使用中文概括。
 
 ### Speaking Assignments
 
@@ -265,7 +266,7 @@ Kimi 调用在 `src/lib/ai/kimi.ts`：
 
 Fallback 在 `src/lib/ai/fallback.ts`：
 
-- 写作 fallback 按标题、编号、字母序号、列表项等拆题。
+- 新上传的写作作业不再展示或保存基础拆分 fallback；只有 AI 结构化成功后才显示题目。
 - 口语 fallback 按段落和行拆朗读单元。
 
 提示词在：
@@ -465,7 +466,7 @@ HTTPS 当前使用手动部署的阿里云个人测试证书，路径见 `PRODUC
 - 不要把 PM2 当成当前生产方案。生产稳定运行方式是 `systemd`。
 - 老服务名 `viettutor.service` 曾造成 3000 端口冲突，排障时注意是否有遗留服务。
 - `certbot` 在当前环境验证不稳定，现有 HTTPS 路径是手动部署阿里云证书。
-- Kimi `finish_reason=length` 通常意味着结构化输出被截断，可调高 `KIMI_MAX_TOKENS` 或接受 fallback。
+- Kimi `finish_reason=length` 通常意味着结构化输出被截断。写作作业会显示 AI 失败原因并保留等待重试状态，可调高 `KIMI_MAX_TOKENS` 后重新调用 AI。
 - Kimi `UND_ERR_HEADERS_TIMEOUT` / `HeadersTimeoutError` 表示请求已发出但上游长时间没有返回响应头，通常是上游排队、模型响应慢、网络抖动或输入过长；可适当增大 `KIMI_REQUEST_TIMEOUT_MS` 和 `KIMI_MAX_RETRIES`。
 - `.env`、`prisma/dev.db` 和 `uploads/` 都是服务器本地状态，不应该提交到 Git。
 - 部署后旧页面提交可能出现 `Failed to find Server Action`，通常刷新浏览器即可。
