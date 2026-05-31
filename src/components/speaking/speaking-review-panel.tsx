@@ -4,7 +4,7 @@ import type { SpeakingReviewGroup, SpeakingReviewStats } from "@/lib/assignment/
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { formatPercent } from "@/lib/utils/format";
+import { formatScore } from "@/lib/utils/format";
 
 export function SpeakingReviewPanel({
   groups,
@@ -22,7 +22,7 @@ export function SpeakingReviewPanel({
         <CardContent className="space-y-5">
           <div className="grid gap-3 sm:grid-cols-3">
             <div className="rounded-2xl border border-border/70 bg-secondary/30 p-4">
-              <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">总单元数</p>
+              <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">总句数</p>
               <p className="mt-2 text-3xl font-semibold">{stats.totalUnits}</p>
             </div>
             <div className="rounded-2xl border border-border/70 bg-secondary/30 p-4">
@@ -31,7 +31,7 @@ export function SpeakingReviewPanel({
             </div>
             <div className="rounded-2xl border border-border/70 bg-secondary/30 p-4">
               <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">平均综合分</p>
-              <p className="mt-2 text-3xl font-semibold">{formatPercent(stats.averageOverallScore)}</p>
+              <p className="mt-2 text-3xl font-semibold">{formatScore(stats.averageOverallScore)}</p>
             </div>
           </div>
 
@@ -52,10 +52,10 @@ export function SpeakingReviewPanel({
                   <div>
                     <p className="font-medium">{group.label}</p>
                     <p className="text-sm text-muted-foreground">
-                      {group.reviewedUnits}/{group.totalUnits} 个单元已批阅
+                      {group.reviewedUnits}/{group.totalUnits} 句已批阅
                     </p>
                   </div>
-                  <Badge variant="outline">{formatPercent(group.averageOverallScore)}</Badge>
+                  <Badge variant="outline">{formatScore(group.averageOverallScore)}</Badge>
                 </div>
               </div>
             ))}

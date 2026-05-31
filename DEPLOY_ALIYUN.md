@@ -92,6 +92,7 @@ Notes:
 - `DATABASE_URL="file:./dev.db"` stores SQLite at `prisma/dev.db`.
 - `KIMI_MAX_TOKENS` controls the Kimi structured-output token budget. Production may set this higher, for example `16384`, if the selected model supports it.
 - `KIMI_REQUEST_TIMEOUT_MS` controls the upstream Kimi HTTP timeout. `KIMI_MAX_RETRIES` controls retries for transient network/upstream timeout failures.
+- Kimi is currently used for writing assignment extraction/structuring. Speaking assignments are TXT-only and do not call Kimi.
 - `PROTECTED_FILE_ACCEL_REDIRECT_PREFIX="/_protected_uploads/"` enables Nginx `X-Accel-Redirect` for protected uploads after the internal Nginx location below is configured.
 
 ## 5. Install Dependencies and Initialize Data
@@ -251,7 +252,7 @@ bash scripts/deploy.sh --with-db-push
 
 The script runs `git pull`, `npm ci`, optionally `npm run db:push`, `npm run build`, and restarts `vietutor-studio`.
 
-The performance update from 2026-05-25 adds Prisma indexes, and the course material simplification from 2026-05-26 removes progress-related columns, so deploy those releases with `--with-db-push`.
+The performance update from 2026-05-25 adds Prisma indexes, the course material simplification from 2026-05-26 removes progress-related columns, and the speaking assignment update from 2026-05-31 adds assignment-level recordings plus sentence review fields, so deploy those releases with `--with-db-push`.
 
 If enabling protected-file acceleration for the first time, update `/etc/nginx/conf.d/viettutor.conf` with the `/_protected_uploads/` internal location above, set `PROTECTED_FILE_ACCEL_REDIRECT_PREFIX="/_protected_uploads/"` in `/var/www/VietTutor-Studio/.env`, then run:
 
@@ -315,3 +316,5 @@ If upload requests return `504`, confirm `proxy_read_timeout` is high enough. Wr
 If Kimi structuring reports `finish_reason=length`, increase `KIMI_MAX_TOKENS` in the server `.env` if the model supports it, restart the service, and use the writing detail page retry button. New writing uploads no longer show or retain the local basic split as the visible question structure.
 
 If Kimi structuring reports `UND_ERR_HEADERS_TIMEOUT` or `HeadersTimeoutError`, the request reached the upstream service but no response headers arrived before timeout. This is usually upstream queueing, slow model generation, network jitter, or very large input. Increase `KIMI_REQUEST_TIMEOUT_MS` and/or `KIMI_MAX_RETRIES`, then restart `vietutor-studio`.
+
+Speaking assignments intentionally accept only `.txt` files after the 2026-05-31 update. DOC/PDF/PPT speaking uploads should fail validation; use writing assignments for AI/Kimi document structuring workflows.

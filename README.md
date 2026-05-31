@@ -14,7 +14,7 @@ VietTutor Studio 是一个面向越南语学习的私有教学工作台。它把
 - 生产环境：Alibaba Cloud Linux 3 + Nginx + systemd + Next.js
 - 数据库：Prisma + SQLite
 - 文件存储：本地 `uploads/`，通过鉴权 API 读取，不放入 `public/`
-- AI 服务：Kimi / Moonshot，用于作业文本抽取和结构化
+- AI 服务：Kimi / Moonshot，用于写作作业文本抽取和结构化
 - 登录方式：全站访问密码 + HttpOnly 签名 Cookie + 数据库 session
 
 生产环境不使用 PM2。仓库里保留的 `ecosystem.config.cjs` 是历史配置，当前稳定方案以 `systemd` 为准。
@@ -193,19 +193,24 @@ Dashboard 汇总：
 
 ### Speaking Assignments
 
-口语作业也支持常见文本和复杂文档上传。
+口语作业只支持上传 `.txt` 纯文本，不再调用 Kimi 或 Kimi Files API。
 
 处理流程：
 
-1. 上传文件到 `uploads/assignments/speaking`。
-2. 抽取文本。
-3. 同步调用 Kimi 结构化为朗读单元。
-4. 如果 Kimi 失败，使用 fallback 结构并把 `aiStatus` 标记为 `FAILED`。
-5. 学生可在浏览器中录音，录音保存到 `uploads/recordings`。
-6. 老师对每条录音填写建议和综合分。
-7. 作业综合分按已评分录音平均值计算。
+1. 上传 TXT 文件到 `uploads/assignments/speaking`。
+2. 服务端直接读取纯文本，并按句末标点拆成朗读句子。当前主要按 `;`、`.` 等句末标点识别可互动句子。
+3. 详情页直接展示美化后的全文朗读文本。
+4. 「口语朗读文本」上方提供全文录音，方便教师先一口气听完整篇朗读。
+5. 点击任一句子后，右侧「句子互动窗体」可保存学生逐句录音、教师发音录音和发音判断。
+6. 发音判断三档为：`准确` 记 10 分，`一般` 记 5 分，`叽里咕噜说些什么呢` 记 0 分。句子标签中 0 分显示为 `听不懂`。
+7. 作业综合分按已批阅句子的分数做算术平均。
 
-注意：口语重试 AI 会删除该作业下已有朗读单元、录音和口语反馈，并删除对应录音文件。这是有数据破坏性的操作，接手时要谨慎。
+录音保存规则：
+
+- 全文录音保存到 `Recording.assignmentId`，不挂到任何单句。
+- 逐句学生录音和教师发音保存到 `Recording.speakingUnitId`。
+- `Recording.kind` 区分 `STUDENT` 和 `TEACHER_STANDARD`。
+- 删除口语作业时会同时删除全文录音、逐句录音和对应上传文件。
 
 ### Course Materials
 
@@ -253,7 +258,7 @@ download=1      # 可选，强制下载
 
 ## AI And Extraction
 
-作业文本抽取在 `src/lib/assignment/source-extraction.ts`：
+写作作业文本抽取在 `src/lib/assignment/source-extraction.ts`：
 
 - Markdown、txt、doc、docx 和 text/json/xml MIME 类型走本地抽取。
 - PDF、PPT、Excel、CSV、HTML、JSON、XML、log 等复杂格式走 Kimi Files API。
@@ -261,18 +266,19 @@ download=1      # 可选，强制下载
 Kimi 调用在 `src/lib/ai/kimi.ts`：
 
 - `/files` 和 `/files/{id}/content` 用于复杂文件抽取。
-- `/chat/completions` 用于结构化写作/口语内容。
+- `/chat/completions` 用于结构化写作内容。
 - 结构化返回必须是 JSON，并通过 Zod schema 校验。
 
 Fallback 在 `src/lib/ai/fallback.ts`：
 
 - 新上传的写作作业不再展示或保存基础拆分 fallback；只有 AI 结构化成功后才显示题目。
-- 口语 fallback 按段落和行拆朗读单元。
+- 口语上传当前不走 AI，也不走 fallback；TXT 会在 `src/lib/assignment/speaking-text.ts` 中本地拆句。
 
-提示词在：
+当前写作提示词在：
 
 - `src/prompts/writing-assignment-structure.prompt.ts`
-- `src/prompts/speaking-assignment-structure.prompt.ts`
+
+`src/prompts/speaking-assignment-structure.prompt.ts` 是历史口语 AI 结构化提示词；当前口语上传不再调用它。
 
 ## Data Model
 
@@ -283,8 +289,8 @@ Fallback 在 `src/lib/ai/fallback.ts`：
 - `AssignmentSection`：写作题目。
 - `TeacherFeedback`：写作题目批阅。
 - `SpeakingUnit`：口语朗读单元。
-- `Recording`：口语录音文件。
-- `SpeakingFeedback`：口语录音批阅。
+- `Recording`：口语录音文件；全文录音挂 `Assignment`，逐句录音挂 `SpeakingUnit`。
+- `SpeakingFeedback`：历史口语录音批阅模型，当前三档发音判断写在 `SpeakingUnit.reviewLevel` / `reviewScore`。
 - `CourseMaterial`：课件文件、类型和分类。
 
 SQLite 文件默认位置：
@@ -355,7 +361,7 @@ Dashboard：
 - 写作结构 normalization 和批阅统计。
 - sanitize 工具。
 - 写作批阅 API 的鉴权、创建反馈和统计更新。
-- 口语批阅 API 的鉴权、upsert 反馈和综合分更新。
+- 口语批阅 API 的鉴权、句子评分和综合分更新。
 
 运行：
 
@@ -394,7 +400,7 @@ cd /var/www/VietTutor-Studio
 bash scripts/deploy.sh --with-db-push
 ```
 
-2026-05-25 的性能优化新增了 Prisma 索引，需要使用 `--with-db-push`。2026-05-26 的课件库精简移除了课件进度、状态、页数和备注字段，也需要使用 `--with-db-push`。
+2026-05-25 的性能优化新增了 Prisma 索引，需要使用 `--with-db-push`。2026-05-26 的课件库精简移除了课件进度、状态、页数和备注字段，也需要使用 `--with-db-push`。2026-05-31 的口语作业改造新增了全文录音关联、录音类型和句子评分字段，同样需要使用 `--with-db-push`。
 
 发布脚本会执行：
 
@@ -468,6 +474,7 @@ HTTPS 当前使用手动部署的阿里云个人测试证书，路径见 `PRODUC
 - `certbot` 在当前环境验证不稳定，现有 HTTPS 路径是手动部署阿里云证书。
 - Kimi `finish_reason=length` 通常意味着结构化输出被截断。写作作业会显示 AI 失败原因并保留等待重试状态，可调高 `KIMI_MAX_TOKENS` 后重新调用 AI。
 - Kimi `UND_ERR_HEADERS_TIMEOUT` / `HeadersTimeoutError` 表示请求已发出但上游长时间没有返回响应头，通常是上游排队、模型响应慢、网络抖动或输入过长；可适当增大 `KIMI_REQUEST_TIMEOUT_MS` 和 `KIMI_MAX_RETRIES`。
+- 口语作业已改为 TXT 本地拆句，不再调用 Kimi；如果上传非 TXT，会直接被拒绝。
 - `.env`、`prisma/dev.db` 和 `uploads/` 都是服务器本地状态，不应该提交到 Git。
 - 部署后旧页面提交可能出现 `Failed to find Server Action`，通常刷新浏览器即可。
 - 写作上传虽已后台结构化，但复杂文件的 Kimi Files API 文本抽取仍可能比纯文本慢。

@@ -1,5 +1,21 @@
 # Changelog
 
+## 2026-05-31
+
+### Added
+
+- Added a full-text recording area on the speaking detail page so teachers can listen to a complete reading before jumping into specific problem sentences.
+- Added teacher pronunciation recordings per speaking sentence, separate from student recordings.
+- Added per-sentence pronunciation judgments for speaking assignments: `准确` = 10, `一般` = 5, `叽里咕噜说些什么呢` = 0.
+
+### Changed
+
+- Changed speaking assignments to accept only `.txt` plain-text uploads and split text locally into sentence units instead of calling Kimi.
+- Reworked the speaking detail page into a styled reading-text panel plus a sentence interaction panel.
+- Changed speaking assignment scores to the arithmetic average of reviewed sentence scores.
+- Updated recording storage so full-text recordings attach to the assignment, while sentence recordings attach to individual speaking units.
+- Updated dashboard and recent assignment displays to show speaking scores as points instead of percentages.
+
 ## 2026-05-28
 
 ### Changed

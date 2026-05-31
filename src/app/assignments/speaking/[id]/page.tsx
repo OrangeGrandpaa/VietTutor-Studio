@@ -1,21 +1,18 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
 
 import { AssignmentStatusBadge } from "@/components/assignment/assignment-status-badge";
-import { RetryAiButton } from "@/components/assignment/retry-ai-button";
 import { AppShell } from "@/components/layout/app-shell";
 import { PageShell } from "@/components/layout/page-shell";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { SpeakingRecorderPanel } from "@/components/speaking/speaking-recorder-panel";
 import { SpeakingReviewPanel } from "@/components/speaking/speaking-review-panel";
+import { SpeakingSentencePractice } from "@/components/speaking/speaking-sentence-practice";
 import { buildSpeakingReviewGroups } from "@/lib/assignment/speaking";
 import { requireAuth } from "@/lib/auth/session";
 import { prisma } from "@/lib/db/prisma";
-import { formatDateTime, formatPercent } from "@/lib/utils/format";
+import { formatDateTime, formatScore } from "@/lib/utils/format";
 
 export default async function SpeakingAssignmentDetailPage({
   params
@@ -27,6 +24,9 @@ export default async function SpeakingAssignmentDetailPage({
   const assignment = await prisma.assignment.findUnique({
     where: { id },
     include: {
+      recordings: {
+        orderBy: { createdAt: "desc" }
+      },
       speakingUnits: {
         orderBy: { orderIndex: "asc" },
         include: {
@@ -48,32 +48,23 @@ export default async function SpeakingAssignmentDetailPage({
   return (
     <AppShell
       title={assignment.title}
-      description={`上传于 ${formatDateTime(assignment.createdAt)}，已拆成 ${stats.totalUnits} 个朗读单元供老师逐条批阅。`}
+      description={`上传于 ${formatDateTime(assignment.createdAt)}，已拆成 ${stats.totalUnits} 句朗读文本供逐句录音和判断。`}
       actions={
-        <>
-          {assignment.aiStatus === "FAILED" ? (
-            <RetryAiButton
-              endpoint={`/api/assignments/speaking/${assignment.id}`}
-              method="PATCH"
-              body={{ action: "retry-ai" }}
-            />
-          ) : null}
-          <Link
-            href={`/api/files/${assignment.id}?kind=assignment&download=1`}
-            className={buttonVariants({ variant: "outline" })}
-          >
-            下载原始文件
-          </Link>
-        </>
+        <Link
+          href={`/api/files/${assignment.id}?kind=assignment&download=1`}
+          className={buttonVariants({ variant: "outline" })}
+        >
+          下载原始 TXT
+        </Link>
       }
     >
       <PageShell>
         <div className="flex flex-wrap items-center gap-3">
           <AssignmentStatusBadge status={assignment.status} aiStatus={assignment.aiStatus} />
-          <Badge variant="outline">总单元数 {stats.totalUnits}</Badge>
-          <Badge variant="outline">已录音 {stats.recordedUnits}</Badge>
+          <Badge variant="outline">总句数 {stats.totalUnits}</Badge>
+          <Badge variant="outline">已录音句子 {stats.recordedUnits}</Badge>
           <Badge variant="outline">已批阅 {stats.reviewedUnits}</Badge>
-          <Badge variant="outline">平均综合分 {formatPercent(stats.averageOverallScore)}</Badge>
+          <Badge variant="outline">平均综合分 {formatScore(stats.averageOverallScore)}</Badge>
         </div>
 
         {assignment.aiStatus === "FAILED" && assignment.aiErrorMessage ? (
@@ -87,27 +78,12 @@ export default async function SpeakingAssignmentDetailPage({
           </Card>
         ) : null}
 
-        <div className="grid gap-6 xl:grid-cols-[1.05fr_0.95fr]">
-          <div className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>学生提交内容</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <details className="group rounded-2xl border border-border/70 bg-secondary/20 p-4">
-                  <summary className="cursor-pointer list-none text-sm font-medium">
-                    展开查看原始 Markdown 内容
-                  </summary>
-                  <div className="prose prose-stone mt-4 max-w-none dark:prose-invert">
-                    <ReactMarkdown remarkPlugins={[remarkGfm]}>{assignment.originalContent}</ReactMarkdown>
-                  </div>
-                </details>
-              </CardContent>
-            </Card>
-
-            <SpeakingRecorderPanel assignmentId={assignment.id} units={assignment.speakingUnits} groups={groups} />
-          </div>
-
+        <div className="space-y-6">
+          <SpeakingSentencePractice
+            assignmentId={assignment.id}
+            fullRecordings={assignment.recordings}
+            units={assignment.speakingUnits}
+          />
           <SpeakingReviewPanel groups={groups} stats={stats} />
         </div>
       </PageShell>

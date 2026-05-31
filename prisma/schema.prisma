@@ -42,6 +42,17 @@ enum SpeakingUnitType {
   DIALOGUE
 }
 
+enum SpeakingReviewLevel {
+  ACCURATE
+  OKAY
+  MUMBLING
+}
+
+enum RecordingKind {
+  STUDENT
+  TEACHER_STANDARD
+}
+
 enum MaterialFileType {
   PDF
   WORD
@@ -93,6 +104,7 @@ model Assignment {
   sections            AssignmentSection[]
   feedbacks           TeacherFeedback[]
   speakingUnits       SpeakingUnit[]
+  recordings          Recording[]
 
   @@index([type, createdAt])
   @@index([type, status, createdAt])
@@ -134,14 +146,16 @@ model TeacherFeedback {
 }
 
 model SpeakingUnit {
-  id           String           @id @default(cuid())
+  id           String               @id @default(cuid())
   assignmentId String
   unitType     SpeakingUnitType
   content      String
   orderIndex   Int
-  createdAt    DateTime         @default(now())
-  updatedAt    DateTime         @updatedAt
-  assignment   Assignment       @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  reviewLevel  SpeakingReviewLevel?
+  reviewScore  Int?
+  createdAt    DateTime             @default(now())
+  updatedAt    DateTime             @updatedAt
+  assignment   Assignment           @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
   recordings   Recording[]
 
   @@index([assignmentId, orderIndex])
@@ -149,16 +163,21 @@ model SpeakingUnit {
 
 model Recording {
   id             String            @id @default(cuid())
-  speakingUnitId String
+  assignmentId   String?
+  speakingUnitId String?
+  kind           RecordingKind     @default(STUDENT)
   filePath       String
   duration       Float?
   mimeType       String
   createdAt      DateTime          @default(now())
   updatedAt      DateTime          @updatedAt
-  speakingUnit   SpeakingUnit      @relation(fields: [speakingUnitId], references: [id], onDelete: Cascade)
+  assignment     Assignment?       @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  speakingUnit   SpeakingUnit?     @relation(fields: [speakingUnitId], references: [id], onDelete: Cascade)
   feedback       SpeakingFeedback?
 
+  @@index([assignmentId, kind, createdAt])
   @@index([speakingUnitId, createdAt])
+  @@index([speakingUnitId, kind, createdAt])
 }
 
 model SpeakingFeedback {

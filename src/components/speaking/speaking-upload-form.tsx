@@ -9,8 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-const assignmentFileAccept =
-  ".md,.markdown,.txt,.doc,.docx,.pdf,.ppt,.pptx,.xls,.xlsx,.csv,.html,.htm,.json,.xml,.log,text/markdown,text/plain,text/csv,text/html,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/pdf,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/json,application/xml,text/xml";
+const assignmentFileAccept = ".txt,text/plain";
 
 export function SpeakingUploadForm() {
   const router = useRouter();
@@ -23,7 +22,7 @@ export function SpeakingUploadForm() {
       <CardHeader>
         <CardTitle>上传口语练习</CardTitle>
         <CardDescription>
-          Markdown、DOC、DOCX 会直接读文本后一次请求调用 Kimi；PDF、PPT、Excel 等复杂文档会自动走 Kimi Files API。
+          口语作业只接收 TXT 纯文本，不再调用 AI。系统会按 ; 或 . 等句末标点拆成可逐句录音的朗读文本。
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -85,7 +84,7 @@ export function SpeakingUploadForm() {
             />
           </div>
           <Button type="submit" disabled={loading}>
-            {loading ? "上传并处理中..." : "上传口语作业"}
+            {loading ? "上传并拆句中..." : "上传并按句拆分"}
           </Button>
         </form>
       </CardContent>

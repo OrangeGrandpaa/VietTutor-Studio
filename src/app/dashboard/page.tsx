@@ -9,7 +9,7 @@ import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { requireAuth } from "@/lib/auth/session";
 import { getDashboardData } from "@/lib/dashboard/get-dashboard-data";
-import { formatPercent } from "@/lib/utils/format";
+import { formatPercent, formatScore } from "@/lib/utils/format";
 
 export default async function DashboardPage() {
   await requireAuth();
@@ -49,7 +49,7 @@ export default async function DashboardPage() {
           />
           <StatCard
             label="口语平均分"
-            value={formatPercent(data.scores.speakingAverage)}
+            value={formatScore(data.scores.speakingAverage)}
             hint={`${data.achievements.recordingsCount} 条录音已沉淀`}
           />
         </section>

@@ -1,6 +1,6 @@
 # Production Status
 
-Last updated: 2026-05-26
+Last updated: 2026-05-31
 
 This file records the current real-world production state for VietTutor Studio. Use it with:
 
@@ -40,6 +40,7 @@ Latest repository state documented by this status file:
 - Course materials no longer store learning progress, learning status, page counts, or notes; material detail pages only show metadata, download, and preview.
 - Assignment and material list pages are paginated, dashboard metrics use database aggregates, and protected file responses support streaming with HTTP `Range` plus optional Nginx `X-Accel-Redirect`.
 - Writing detail page inline-blank answer inputs and Chinese structuring-name normalization are included in the documented behavior.
+- Speaking assignments accept TXT only, split sentences locally without Kimi, support full-text recordings, per-sentence student recordings, teacher pronunciation recordings, and 10/5/0 pronunciation judgments.
 
 Do not assume the server is on this exact commit without checking it directly:
 
@@ -71,6 +72,23 @@ Writing assignment list page:
 Speaking assignment list page:
 
 - The list is paginated and only loads card-rendering fields plus the unit count.
+
+Speaking assignment upload:
+
+- Uploads accept only `.txt` plain-text files.
+- Speaking upload no longer calls Kimi or Kimi Files API.
+- The server reads the TXT content directly and locally splits it into interactive sentence units by sentence-ending punctuation such as `;` and `.`.
+- Non-TXT files are rejected before assignment creation.
+
+Speaking assignment detail page:
+
+- The page shows a styled reading-text panel rather than AI-generated unit groups.
+- The reading-text panel includes a full-text recording area so a complete long passage can be recorded and played before sentence-level review.
+- Full-text recordings attach to the assignment itself and do not count as any single sentence recording.
+- Each sentence opens the sentence interaction panel for student audio input, teacher pronunciation recording, and pronunciation judgment.
+- Teacher judgment options are `准确`, `一般`, and `叽里咕噜说些什么呢`, scored as 10, 5, and 0 respectively.
+- Sentence labels show the 0-point state as `听不懂`.
+- The assignment overall score is the arithmetic average of reviewed sentence scores.
 
 Writing assignment upload:
 
@@ -104,6 +122,7 @@ AI configuration:
 - `KIMI_REQUEST_TIMEOUT_MS` and `KIMI_MAX_RETRIES` are configurable in the server `.env` for slow upstream responses or transient Kimi network failures.
 - The user intended to set production to `KIMI_MAX_TOKENS="16384"` after seeing length-limited Kimi responses.
 - `.env` is server-local and is not committed to Git.
+- Kimi configuration currently affects writing assignment extraction/structuring; speaking assignments no longer depend on Kimi.
 
 Course materials:
 
@@ -115,6 +134,7 @@ Course materials:
 Dashboard and files:
 
 - Dashboard totals, averages, and material library counts are calculated with database aggregate queries instead of full-table application-side scans.
+- Dashboard and recent-assignment cards show speaking scores as points, not percentages.
 - Protected assignment, material, and recording files stream from disk and support HTTP `Range`, improving large PDF/video/audio access and reducing memory pressure.
 - Protected file responses include `ETag` and `Last-Modified` so repeat previews can reuse browser cache.
 - When `PROTECTED_FILE_ACCEL_REDIRECT_PREFIX` is configured, `/api/files/[id]` still performs authentication and database lookup, then returns `X-Accel-Redirect` so Nginx sends the actual upload bytes instead of the Next.js process.
@@ -195,7 +215,7 @@ cd /var/www/VietTutor-Studio
 bash scripts/deploy.sh --with-db-push
 ```
 
-The 2026-05-25 performance update adds Prisma indexes, and the 2026-05-26 course material simplification removes progress-related columns. Deploy these releases with `--with-db-push`.
+The 2026-05-25 performance update adds Prisma indexes, the 2026-05-26 course material simplification removes progress-related columns, and the 2026-05-31 speaking assignment update adds assignment-level recordings plus sentence review fields. Deploy these releases with `--with-db-push`.
 
 The script installs dependencies from `package-lock.json`, builds the app, and restarts `vietutor-studio`.
 
@@ -208,6 +228,7 @@ The script installs dependencies from `package-lock.json`, builds the app, and r
 - Browser-side `Failed to find Server Action` logs can occur after deployments when an old page submits against a newer build; refreshing the browser usually clears it.
 - Kimi `HeadersTimeoutError` / `UND_ERR_HEADERS_TIMEOUT` means the upstream did not return response headers in time; it is normally not a document-format issue. Tune `KIMI_REQUEST_TIMEOUT_MS` / `KIMI_MAX_RETRIES` and restart `vietutor-studio`.
 - Kimi `.env` changes such as `KIMI_MAX_TOKENS`, `KIMI_REQUEST_TIMEOUT_MS`, or `KIMI_MAX_RETRIES` require restarting `vietutor-studio`.
+- Speaking uploads now require TXT. If a teacher tries to upload DOC/PDF/PPT as a speaking assignment, the upload should fail by design.
 
 ## Verification
 

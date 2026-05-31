@@ -3,7 +3,7 @@ import type { Recording, SpeakingFeedback, SpeakingUnit } from "@prisma/client";
 export type SpeakingUnitWithRelations = SpeakingUnit & {
   recordings: Array<
     Recording & {
-      feedback: SpeakingFeedback | null;
+      feedback?: SpeakingFeedback | null;
     }
   >;
 };
@@ -15,12 +15,13 @@ export type SpeakingReviewItem = {
   orderIndex: number;
   latestRecording:
     | (Recording & {
-        feedback: SpeakingFeedback | null;
+        feedback?: SpeakingFeedback | null;
       })
     | null;
   recordingsCount: number;
   isReviewed: boolean;
   overallScore: number | null;
+  reviewLevel: SpeakingUnit["reviewLevel"];
 };
 
 export type SpeakingReviewGroup = {
@@ -66,11 +67,13 @@ function unitTypeLabel(unitType: SpeakingUnit["unitType"]) {
 }
 
 function getLatestRecording(unit: SpeakingUnitWithRelations) {
-  if (!unit.recordings.length) {
+  const studentRecordings = unit.recordings.filter((recording) => recording.kind === "STUDENT");
+
+  if (!studentRecordings.length) {
     return null;
   }
 
-  return [...unit.recordings].sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt))[0] ?? null;
+  return [...studentRecordings].sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt))[0] ?? null;
 }
 
 export function buildSpeakingReviewGroups(units: SpeakingUnitWithRelations[]): {
@@ -79,7 +82,8 @@ export function buildSpeakingReviewGroups(units: SpeakingUnitWithRelations[]): {
 } {
   const mappedUnits: SpeakingReviewItem[] = units.map((unit) => {
     const latestRecording = getLatestRecording(unit);
-    const overallScore = latestRecording?.feedback?.overallScore ?? null;
+    const overallScore = unit.reviewScore;
+    const recordingsCount = unit.recordings.filter((recording) => recording.kind === "STUDENT").length;
 
     return {
       id: unit.id,
@@ -87,9 +91,10 @@ export function buildSpeakingReviewGroups(units: SpeakingUnitWithRelations[]): {
       content: unit.content,
       orderIndex: unit.orderIndex,
       latestRecording,
-      recordingsCount: unit.recordings.length,
+      recordingsCount,
       isReviewed: overallScore !== null,
-      overallScore
+      overallScore,
+      reviewLevel: unit.reviewLevel
     };
   });
 

@@ -20,6 +20,14 @@ export function formatPercent(value: number | null | undefined) {
   return `${value}%`;
 }
 
+export function formatScore(value: number | null | undefined) {
+  if (value === null || value === undefined) {
+    return "--";
+  }
+
+  return `${value} 分`;
+}
+
 export function assignmentStatusLabel(status: AssignmentStatus) {
   switch (status) {
     case "PENDING_REVIEW":

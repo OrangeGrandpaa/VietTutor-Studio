@@ -4,7 +4,7 @@ import { AiProcessStatus, AssignmentStatus, AssignmentType } from "@prisma/clien
 
 import { AssignmentStatusBadge } from "@/components/assignment/assignment-status-badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { formatDateTime, formatPercent } from "@/lib/utils/format";
+import { formatDateTime, formatPercent, formatScore } from "@/lib/utils/format";
 
 type RecentItem = {
   id: string;
@@ -47,7 +47,7 @@ export function RecentAssignmentList({
               </div>
               <div className="flex items-center gap-3">
                 <p className="text-sm font-medium">
-                  {item.type === "WRITING" ? formatPercent(item.accuracyScore) : formatPercent(item.overallScore ?? null)}
+                  {item.type === "WRITING" ? formatPercent(item.accuracyScore) : formatScore(item.overallScore ?? null)}
                 </p>
                 <AssignmentStatusBadge status={item.status} aiStatus={item.aiStatus} />
               </div>

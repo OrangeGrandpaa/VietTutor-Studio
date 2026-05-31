@@ -13,7 +13,7 @@ import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { requireAuth } from "@/lib/auth/session";
 import { prisma } from "@/lib/db/prisma";
-import { formatDateTime, formatPercent } from "@/lib/utils/format";
+import { formatDateTime, formatScore } from "@/lib/utils/format";
 import { getPagination } from "@/lib/utils/pagination";
 
 function buildSpeakingHref(page = 1) {
@@ -54,7 +54,7 @@ export default async function SpeakingAssignmentsPage({
   return (
     <AppShell
       title="口语作业"
-      description="支持 Markdown、DOC、DOCX 直读，以及 PDF、PPT、Excel 等复杂文档的自动抽取。"
+      description="上传 TXT 纯文本后按句拆分，学生逐句录音，教师可录制标准音并给出三档判断。"
       actions={
         <Link href="/assignments/speaking/new" className={buttonVariants()}>
           新建口语作业
@@ -65,7 +65,7 @@ export default async function SpeakingAssignmentsPage({
         {assignments.length === 0 ? (
           <EmptyState
             title="还没有口语作业"
-            description="上传一份练习文件，系统会自动拆成适合逐条录音和批阅的练习单元。"
+            description="上传一份 TXT 朗读文本，系统会自动拆成适合逐句录音和批阅的句子。"
             actionHref="/assignments/speaking/new"
             actionLabel="上传第一份口语作业"
           />
@@ -79,15 +79,15 @@ export default async function SpeakingAssignmentsPage({
                     <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
                       <span>{formatDateTime(assignment.createdAt)}</span>
                       <span>{assignment.originalFileName}</span>
-                      <span>{assignment._count.speakingUnits} 个单元</span>
-                      <span>综合分 {formatPercent(assignment.overallScore)}</span>
+                      <span>{assignment._count.speakingUnits} 句</span>
+                      <span>综合分 {formatScore(assignment.overallScore)}</span>
                     </div>
                   </div>
                   <AssignmentStatusBadge status={assignment.status} aiStatus={assignment.aiStatus} />
                 </CardHeader>
                 <CardContent className="flex flex-wrap items-center justify-between gap-4">
                   <p className="max-w-2xl text-sm text-muted-foreground">
-                    进入详情页可查看练习单元、录音情况和逐条批阅结果。
+                    进入详情页可查看朗读文本、学生录音、教师标准音和逐句判断结果。
                   </p>
                   <div className="flex flex-wrap items-center gap-2">
                     <Link href={`/assignments/speaking/${assignment.id}`} className={buttonVariants({ variant: "outline" })}>

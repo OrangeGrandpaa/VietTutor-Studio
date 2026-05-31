@@ -8,7 +8,7 @@ export default async function NewSpeakingAssignmentPage() {
   return (
     <AppShell
       title="上传口语作业"
-      description="支持本地文本直读和 Kimi Files API 两种解析路径，系统会自动拆成适合录音和逐条批阅的练习单元。"
+      description="只支持 TXT 纯文本上传；系统本地按句拆分，不再调用 AI。"
     >
       <PageShell>
         <SpeakingUploadForm />

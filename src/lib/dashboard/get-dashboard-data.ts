@@ -6,6 +6,30 @@ function roundMetric(value: number | null | undefined) {
   return typeof value === "number" ? Math.round(value) : 0;
 }
 
+function normalizeSpeakingScore(value: number | null | undefined) {
+  if (typeof value !== "number") {
+    return null;
+  }
+
+  return value > 10 ? Math.round(value / 10) : Math.round(value);
+}
+
+function speakingScoreToPercent(value: number | null | undefined) {
+  if (typeof value !== "number") {
+    return 0;
+  }
+
+  return value > 10 ? Math.round(value) : Math.round(value * 10);
+}
+
+function average(values: number[]) {
+  if (values.length === 0) {
+    return 0;
+  }
+
+  return Math.round(values.reduce((sum, value) => sum + value, 0) / values.length);
+}
+
 function calculateStreak(dateKeys: string[]) {
   const uniqueKeys = Array.from(new Set(dateKeys)).sort().reverse();
   const keySet = new Set(uniqueKeys);
@@ -37,7 +61,7 @@ export async function getDashboardData() {
     completedAssignments,
     reviewedAccuracy,
     writingAccuracy,
-    speakingScore,
+    speakingAssignmentsForScore,
     recentWriting,
     recentSpeaking,
     trendAssignments,
@@ -59,9 +83,9 @@ export async function getDashboardData() {
       where: { type: AssignmentType.WRITING, accuracyScore: { not: null } },
       _avg: { accuracyScore: true }
     }),
-    prisma.assignment.aggregate({
+    prisma.assignment.findMany({
       where: { type: AssignmentType.SPEAKING, overallScore: { not: null } },
-      _avg: { overallScore: true }
+      select: { overallScore: true }
     }),
     prisma.assignment.findMany({
       where: { type: AssignmentType.WRITING },
@@ -133,8 +157,15 @@ export async function getDashboardData() {
     .reverse()
     .map((item) => ({
       date: item.createdAt.toISOString().slice(5, 10),
-      accuracy: item.type === AssignmentType.WRITING ? item.accuracyScore ?? 0 : item.overallScore ?? 0
+      accuracy:
+        item.type === AssignmentType.WRITING
+          ? item.accuracyScore ?? 0
+          : speakingScoreToPercent(item.overallScore)
     }));
+  const speakingScores = speakingAssignmentsForScore.flatMap((item) => {
+    const normalized = normalizeSpeakingScore(item.overallScore);
+    return normalized === null ? [] : [normalized];
+  });
 
   const activityDates = [
     ...assignmentActivityDates.map((item) => item.createdAt.toISOString().slice(0, 10)),
@@ -150,7 +181,7 @@ export async function getDashboardData() {
     },
     scores: {
       writingAverage: roundMetric(writingAccuracy._avg.accuracyScore),
-      speakingAverage: roundMetric(speakingScore._avg.overallScore)
+      speakingAverage: average(speakingScores)
     },
     recentWriting,
     recentSpeaking,
