@@ -193,12 +193,12 @@ Dashboard 汇总：
 
 ### Speaking Assignments
 
-口语作业只支持上传 `.txt` 纯文本，不再调用 Kimi 或 Kimi Files API。
+口语作业支持上传 `.txt` 纯文本和 `.rtf` 富文本，不再调用 Kimi 或 Kimi Files API。
 
 处理流程：
 
-1. 上传 TXT 文件到 `uploads/assignments/speaking`。
-2. 服务端直接读取纯文本，并按句末标点拆成朗读句子。当前主要按 `;`、`.` 等句末标点识别可互动句子。
+1. 上传 TXT 或 RTF 文件到 `uploads/assignments/speaking`。
+2. 服务端直接读取文本；RTF 会先转成纯文本，再按句末标点拆成朗读句子。当前主要按 `;`、`.` 等句末标点识别可互动句子。
 3. 详情页直接展示美化后的全文朗读文本。
 4. 「口语朗读文本」上方提供全文录音，方便教师先一口气听完整篇朗读。
 5. 点击任一句子后，右侧「句子互动窗体」可保存学生逐句录音、教师发音录音和发音判断。
@@ -272,7 +272,7 @@ Kimi 调用在 `src/lib/ai/kimi.ts`：
 Fallback 在 `src/lib/ai/fallback.ts`：
 
 - 新上传的写作作业不再展示或保存基础拆分 fallback；只有 AI 结构化成功后才显示题目。
-- 口语上传当前不走 AI，也不走 fallback；TXT 会在 `src/lib/assignment/speaking-text.ts` 中本地拆句。
+- 口语上传当前不走 AI，也不走 fallback；TXT/RTF 会在 `src/lib/assignment/speaking-text.ts` 中本地转文本并拆句。
 
 当前写作提示词在：
 
@@ -474,7 +474,7 @@ HTTPS 当前使用手动部署的阿里云个人测试证书，路径见 `PRODUC
 - `certbot` 在当前环境验证不稳定，现有 HTTPS 路径是手动部署阿里云证书。
 - Kimi `finish_reason=length` 通常意味着结构化输出被截断。写作作业会显示 AI 失败原因并保留等待重试状态，可调高 `KIMI_MAX_TOKENS` 后重新调用 AI。
 - Kimi `UND_ERR_HEADERS_TIMEOUT` / `HeadersTimeoutError` 表示请求已发出但上游长时间没有返回响应头，通常是上游排队、模型响应慢、网络抖动或输入过长；可适当增大 `KIMI_REQUEST_TIMEOUT_MS` 和 `KIMI_MAX_RETRIES`。
-- 口语作业已改为 TXT 本地拆句，不再调用 Kimi；如果上传非 TXT，会直接被拒绝。
+- 口语作业已改为 TXT/RTF 本地拆句，不再调用 Kimi；如果上传 DOC/PDF/PPT 等其它格式，会直接被拒绝。
 - `.env`、`prisma/dev.db` 和 `uploads/` 都是服务器本地状态，不应该提交到 Git。
 - 部署后旧页面提交可能出现 `Failed to find Server Action`，通常刷新浏览器即可。
 - 写作上传虽已后台结构化，但复杂文件的 Kimi Files API 文本抽取仍可能比纯文本慢。

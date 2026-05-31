@@ -40,7 +40,7 @@ Latest repository state documented by this status file:
 - Course materials no longer store learning progress, learning status, page counts, or notes; material detail pages only show metadata, download, and preview.
 - Assignment and material list pages are paginated, dashboard metrics use database aggregates, and protected file responses support streaming with HTTP `Range` plus optional Nginx `X-Accel-Redirect`.
 - Writing detail page inline-blank answer inputs and Chinese structuring-name normalization are included in the documented behavior.
-- Speaking assignments accept TXT only, split sentences locally without Kimi, support full-text recordings, per-sentence student recordings, teacher pronunciation recordings, and 10/5/0 pronunciation judgments.
+- Speaking assignments accept TXT and RTF, split sentences locally without Kimi, support full-text recordings, per-sentence student recordings, teacher pronunciation recordings, and 10/5/0 pronunciation judgments.
 
 Do not assume the server is on this exact commit without checking it directly:
 
@@ -75,10 +75,10 @@ Speaking assignment list page:
 
 Speaking assignment upload:
 
-- Uploads accept only `.txt` plain-text files.
+- Uploads accept `.txt` plain-text and `.rtf` rich-text files.
 - Speaking upload no longer calls Kimi or Kimi Files API.
-- The server reads the TXT content directly and locally splits it into interactive sentence units by sentence-ending punctuation such as `;` and `.`.
-- Non-TXT files are rejected before assignment creation.
+- The server reads TXT directly; RTF is converted to plain text before local sentence splitting.
+- DOC/PDF/PPT and other non-TXT/RTF files are rejected before assignment creation.
 
 Speaking assignment detail page:
 
@@ -228,7 +228,7 @@ The script installs dependencies from `package-lock.json`, builds the app, and r
 - Browser-side `Failed to find Server Action` logs can occur after deployments when an old page submits against a newer build; refreshing the browser usually clears it.
 - Kimi `HeadersTimeoutError` / `UND_ERR_HEADERS_TIMEOUT` means the upstream did not return response headers in time; it is normally not a document-format issue. Tune `KIMI_REQUEST_TIMEOUT_MS` / `KIMI_MAX_RETRIES` and restart `vietutor-studio`.
 - Kimi `.env` changes such as `KIMI_MAX_TOKENS`, `KIMI_REQUEST_TIMEOUT_MS`, or `KIMI_MAX_RETRIES` require restarting `vietutor-studio`.
-- Speaking uploads now require TXT. If a teacher tries to upload DOC/PDF/PPT as a speaking assignment, the upload should fail by design.
+- Speaking uploads now require TXT or RTF. If a teacher tries to upload DOC/PDF/PPT as a speaking assignment, the upload should fail by design.
 
 ## Verification
 

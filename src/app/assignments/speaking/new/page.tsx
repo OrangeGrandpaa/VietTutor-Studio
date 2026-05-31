@@ -8,7 +8,7 @@ export default async function NewSpeakingAssignmentPage() {
   return (
     <AppShell
       title="上传口语作业"
-      description="只支持 TXT 纯文本上传；系统本地按句拆分，不再调用 AI。"
+      description="支持 TXT 纯文本和 RTF 富文本上传；系统本地按句拆分，不再调用 AI。"
     >
       <PageShell>
         <SpeakingUploadForm />

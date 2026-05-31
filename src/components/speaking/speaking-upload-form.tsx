@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-const assignmentFileAccept = ".txt,text/plain";
+const assignmentFileAccept = ".txt,.rtf,text/plain,text/rtf,application/rtf,application/x-rtf";
 
 export function SpeakingUploadForm() {
   const router = useRouter();
@@ -22,7 +22,7 @@ export function SpeakingUploadForm() {
       <CardHeader>
         <CardTitle>上传口语练习</CardTitle>
         <CardDescription>
-          口语作业只接收 TXT 纯文本，不再调用 AI。系统会按 ; 或 . 等句末标点拆成可逐句录音的朗读文本。
+          口语作业接收 TXT 或 RTF 文本，不再调用 AI。系统会按 ; 或 . 等句末标点拆成可逐句录音的朗读文本。
         </CardDescription>
       </CardHeader>
       <CardContent>

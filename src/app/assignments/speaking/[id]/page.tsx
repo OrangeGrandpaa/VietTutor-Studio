@@ -54,7 +54,7 @@ export default async function SpeakingAssignmentDetailPage({
           href={`/api/files/${assignment.id}?kind=assignment&download=1`}
           className={buttonVariants({ variant: "outline" })}
         >
-          下载原始 TXT
+          下载原始文件
         </Link>
       }
     >

@@ -10,7 +10,7 @@
 
 ### Changed
 
-- Changed speaking assignments to accept only `.txt` plain-text uploads and split text locally into sentence units instead of calling Kimi.
+- Changed speaking assignments to accept `.txt` plain-text and `.rtf` rich-text uploads, then split extracted text locally into sentence units instead of calling Kimi.
 - Reworked the speaking detail page into a styled reading-text panel plus a sentence interaction panel.
 - Changed speaking assignment scores to the arithmetic average of reviewed sentence scores.
 - Updated recording storage so full-text recordings attach to the assignment, while sentence recordings attach to individual speaking units.

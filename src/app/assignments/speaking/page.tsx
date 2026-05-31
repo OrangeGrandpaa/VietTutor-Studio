@@ -54,7 +54,7 @@ export default async function SpeakingAssignmentsPage({
   return (
     <AppShell
       title="口语作业"
-      description="上传 TXT 纯文本后按句拆分，学生逐句录音，教师可录制标准音并给出三档判断。"
+      description="上传 TXT 或 RTF 文本后按句拆分，学生逐句录音，教师可录制标准音并给出三档判断。"
       actions={
         <Link href="/assignments/speaking/new" className={buttonVariants()}>
           新建口语作业
@@ -65,7 +65,7 @@ export default async function SpeakingAssignmentsPage({
         {assignments.length === 0 ? (
           <EmptyState
             title="还没有口语作业"
-            description="上传一份 TXT 朗读文本，系统会自动拆成适合逐句录音和批阅的句子。"
+            description="上传一份 TXT 或 RTF 朗读文本，系统会自动拆成适合逐句录音和批阅的句子。"
             actionHref="/assignments/speaking/new"
             actionLabel="上传第一份口语作业"
           />

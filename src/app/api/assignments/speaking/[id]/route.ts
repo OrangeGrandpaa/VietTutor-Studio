@@ -53,7 +53,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   if (!assignment) return jsonError("作业不存在。", 404);
 
   if (body?.action === "retry-ai") {
-    return jsonError("口语作业已改为 TXT 本地拆句，不再调用 AI。", 400);
+    return jsonError("口语作业已改为 TXT/RTF 本地拆句，不再调用 AI。", 400);
   }
 
   const title = sanitizeOptionalText(body?.title);

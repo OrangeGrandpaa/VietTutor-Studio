@@ -1,7 +1,7 @@
 import { AssignmentStatus, AssignmentType, Prisma } from "@prisma/client";
 import { NextRequest } from "next/server";
 
-import { buildSpeakingTextAssignment } from "@/lib/assignment/speaking-text";
+import { buildSpeakingTextAssignment, extractPlainTextFromRtf } from "@/lib/assignment/speaking-text";
 import { logAuditEvent } from "@/lib/audit/log";
 import { ensureAuthenticatedApi } from "@/lib/auth/session";
 import { prisma } from "@/lib/db/prisma";
@@ -11,10 +11,18 @@ import { getRequestMeta } from "@/lib/utils/request";
 import { sanitizeOptionalText } from "@/lib/utils/sanitize";
 import type { SpeakingStructuredContent } from "@/types/assignment";
 
-const txtUploadConfig = {
-  allowedExtensions: [".txt"],
-  allowedMimeTypes: ["text/plain"]
+const speakingUploadConfig = {
+  allowedExtensions: [".txt", ".rtf"],
+  allowedMimeTypes: ["application/rtf", "application/x-rtf", "text/plain", "text/rtf"]
 };
+
+function getSpeakingFileType(fileName: string) {
+  const lowerName = fileName.toLowerCase();
+
+  if (lowerName.endsWith(".txt")) return "txt";
+  if (lowerName.endsWith(".rtf")) return "rtf";
+  return null;
+}
 
 export async function GET() {
   const session = await ensureAuthenticatedApi();
@@ -41,13 +49,15 @@ export async function POST(request: NextRequest) {
     return jsonError("请上传练习文件。");
   }
 
-  if (!file.name.toLowerCase().endsWith(".txt")) {
-    return jsonError("口语作业现在只支持上传 .txt 纯文本文件。");
+  const fileType = getSpeakingFileType(file.name);
+  if (!fileType) {
+    return jsonError("口语作业现在只支持上传 .txt 或 .rtf 文件。");
   }
 
-  const sourceText = (await file.text()).trim();
+  const rawText = await file.text();
+  const sourceText = (fileType === "rtf" ? extractPlainTextFromRtf(rawText) : rawText).trim();
   if (!sourceText) {
-    return jsonError("TXT 文件内容为空。");
+    return jsonError("文件内容为空或无法读取。");
   }
 
   const title = customTitle ?? file.name.replace(/\.[^.]+$/, "");
@@ -56,13 +66,13 @@ export async function POST(request: NextRequest) {
   try {
     structured = buildSpeakingTextAssignment({ text: sourceText, title });
   } catch (error) {
-    return jsonError(error instanceof Error ? error.message : "TXT 拆句失败。");
+    return jsonError(error instanceof Error ? error.message : "文本拆句失败。");
   }
 
   const savedFile = await saveUploadedFile({
     file,
     bucket: "assignments/speaking",
-    ...txtUploadConfig
+    ...speakingUploadConfig
   });
 
   const assignment = await prisma.$transaction(async (tx) => {
@@ -105,7 +115,7 @@ export async function POST(request: NextRequest) {
       success: true,
       id: assignment.id,
       aiStatus: "SUCCEEDED",
-      sourceStrategy: "txt-sentence-split",
+      sourceStrategy: `${fileType}-sentence-split`,
       message: "口语作业已上传，并按句子拆分完成。"
     },
     201
