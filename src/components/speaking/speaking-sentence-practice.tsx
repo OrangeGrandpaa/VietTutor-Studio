@@ -190,6 +190,14 @@ export function SpeakingSentencePractice({
     }
   }
 
+  async function restartRecording() {
+    if (!recordingTarget) {
+      return;
+    }
+
+    await startRecording(recordingTarget);
+  }
+
   async function uploadPreview() {
     if (!previewBlob || !recordingTarget) {
       return;
@@ -372,20 +380,35 @@ export function SpeakingSentencePractice({
                             <Square className="mr-2 h-4 w-4" />
                             停止
                           </Button>
+                          <Button variant="ghost" onClick={() => resetPreview(activeUnitId)}>
+                            取消
+                          </Button>
                         </>
                       ) : null}
                       {recordingState === "paused" ? (
-                        <Button onClick={() => mediaRecorderRef.current?.resume()}>
-                          <Play className="mr-2 h-4 w-4" />
-                          继续
-                        </Button>
+                        <>
+                          <Button onClick={() => mediaRecorderRef.current?.resume()}>
+                            <Play className="mr-2 h-4 w-4" />
+                            继续
+                          </Button>
+                          <Button variant="outline" onClick={() => mediaRecorderRef.current?.stop()}>
+                            <Square className="mr-2 h-4 w-4" />
+                            停止
+                          </Button>
+                          <Button variant="ghost" onClick={() => resetPreview(activeUnitId)}>
+                            取消
+                          </Button>
+                        </>
                       ) : null}
                       {recordingState === "ready" ? (
                         <>
                           <Button onClick={() => uploadPreview()}>保存录音</Button>
-                          <Button variant="outline" onClick={() => resetPreview(activeUnitId)}>
+                          <Button variant="outline" onClick={() => restartRecording()}>
                             <RotateCcw className="mr-2 h-4 w-4" />
                             重录
+                          </Button>
+                          <Button variant="ghost" onClick={() => resetPreview(activeUnitId)}>
+                            取消
                           </Button>
                         </>
                       ) : null}
@@ -563,20 +586,35 @@ export function SpeakingSentencePractice({
                             <Square className="mr-2 h-4 w-4" />
                             停止
                           </Button>
+                          <Button variant="ghost" onClick={() => resetPreview(activeUnit.id)}>
+                            取消
+                          </Button>
                         </>
                       ) : null}
                       {recordingState === "paused" ? (
-                        <Button onClick={() => mediaRecorderRef.current?.resume()}>
-                          <Play className="mr-2 h-4 w-4" />
-                          继续
-                        </Button>
+                        <>
+                          <Button onClick={() => mediaRecorderRef.current?.resume()}>
+                            <Play className="mr-2 h-4 w-4" />
+                            继续
+                          </Button>
+                          <Button variant="outline" onClick={() => mediaRecorderRef.current?.stop()}>
+                            <Square className="mr-2 h-4 w-4" />
+                            停止
+                          </Button>
+                          <Button variant="ghost" onClick={() => resetPreview(activeUnit.id)}>
+                            取消
+                          </Button>
+                        </>
                       ) : null}
                       {recordingState === "ready" ? (
                         <>
                           <Button onClick={() => uploadPreview()}>保存录音</Button>
-                          <Button variant="outline" onClick={() => resetPreview(activeUnit.id)}>
+                          <Button variant="outline" onClick={() => restartRecording()}>
                             <RotateCcw className="mr-2 h-4 w-4" />
                             重录
+                          </Button>
+                          <Button variant="ghost" onClick={() => resetPreview(activeUnit.id)}>
+                            取消
                           </Button>
                         </>
                       ) : null}

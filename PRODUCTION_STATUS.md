@@ -1,6 +1,6 @@
 # Production Status
 
-Last updated: 2026-05-31
+Last updated: 2026-06-01
 
 This file records the current real-world production state for VietTutor Studio. Use it with:
 
@@ -89,6 +89,7 @@ Speaking assignment detail page:
 - Teacher judgment options are `准确`, `一般`, and `叽里咕噜说些什么呢`, scored as 10, 5, and 0 respectively.
 - Sentence labels show the 0-point state as `听不懂`.
 - The assignment overall score is the arithmetic average of reviewed sentence scores.
+- Recording panels support pause, stop, save, retry, and cancel. Retry keeps the current full-text or sentence target active; cancel discards unsaved audio and closes the recording panel.
 
 Writing assignment upload:
 

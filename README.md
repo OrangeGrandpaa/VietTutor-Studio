@@ -211,6 +211,7 @@ Dashboard 汇总：
 - 逐句学生录音和教师发音保存到 `Recording.speakingUnitId`。
 - `Recording.kind` 区分 `STUDENT` 和 `TEACHER_STANDARD`。
 - 删除口语作业时会同时删除全文录音、逐句录音和对应上传文件。
+- 录音窗体支持暂停、停止、保存、重录和取消；`重录` 会保留当前全文/句子录音目标并重新开始录制，`取消` 会丢弃未保存音频并关闭录音窗体。
 
 ### Course Materials
 

@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-06-01
+
+### Changed
+
+- Fixed speaking recording retry controls so `重录` keeps the current full-text or sentence recording panel open and immediately starts a new recording.
+- Added `取消` controls to speaking recording panels for recording, paused, and preview-ready states so unsaved audio can be discarded without saving.
+
 ## 2026-05-31
 
 ### Added
