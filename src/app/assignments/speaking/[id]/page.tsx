@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { AssignmentStatusBadge } from "@/components/assignment/assignment-status-badge";
+import { AssignmentTitleEditor } from "@/components/assignment/assignment-title-editor";
 import { AppShell } from "@/components/layout/app-shell";
 import { PageShell } from "@/components/layout/page-shell";
 import { Badge } from "@/components/ui/badge";
@@ -50,13 +51,20 @@ export default async function SpeakingAssignmentDetailPage({
       title={assignment.title}
       description={`上传于 ${formatDateTime(assignment.createdAt)}，已拆成 ${stats.totalUnits} 句朗读文本供逐句录音和判断。`}
       actions={
-        <Link
-          href={`/api/files/${assignment.id}?kind=assignment&download=1`}
-          className={buttonVariants({ variant: "outline" })}
-        >
-          下载原始文件
-        </Link>
+        <>
+          <Link
+            href={`/api/files/${assignment.id}?kind=assignment&download=1`}
+            className={buttonVariants({ variant: "outline" })}
+          >
+            下载原始文件
+          </Link>
+          <AssignmentTitleEditor
+            endpoint={`/api/assignments/speaking/${assignment.id}`}
+            initialTitle={assignment.title}
+          />
+        </>
       }
+      showSettings={false}
     >
       <PageShell>
         <div className="flex flex-wrap items-center gap-3">

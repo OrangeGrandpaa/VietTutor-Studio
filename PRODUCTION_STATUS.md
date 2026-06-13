@@ -1,6 +1,6 @@
 # Production Status
 
-Last updated: 2026-06-01
+Last updated: 2026-06-13
 
 This file records the current real-world production state for VietTutor Studio. Use it with:
 
@@ -40,7 +40,8 @@ Latest repository state documented by this status file:
 - Course materials no longer store learning progress, learning status, page counts, or notes; material detail pages only show metadata, download, and preview.
 - Assignment and material list pages are paginated, dashboard metrics use database aggregates, and protected file responses support streaming with HTTP `Range` plus optional Nginx `X-Accel-Redirect`.
 - Writing detail page inline-blank answer inputs and Chinese structuring-name normalization are included in the documented behavior.
-- Speaking assignments accept TXT and RTF, split sentences locally without Kimi, support full-text recordings, per-sentence student recordings, teacher pronunciation recordings, and 10/5/0 pronunciation judgments.
+- Writing and speaking detail pages replace the global settings button with an assignment title editor.
+- Speaking assignments accept TXT and RTF, split sentences locally without Kimi, support filtered list views, full-text recordings, per-sentence student recordings, teacher pronunciation recordings, and 10/5/0 pronunciation judgments.
 
 Do not assume the server is on this exact commit without checking it directly:
 
@@ -71,7 +72,9 @@ Writing assignment list page:
 
 Speaking assignment list page:
 
+- The list supports `全部`, `已批阅`, and `未批阅` filters.
 - The list is paginated and only loads card-rendering fields plus the unit count.
+- List cards use the same compact structure as writing assignments, with `查看` / `删除` actions beside each record.
 
 Speaking assignment upload:
 
@@ -82,10 +85,14 @@ Speaking assignment upload:
 
 Speaking assignment detail page:
 
+- The page header includes a title editor in the former settings-button position.
 - The page shows a styled reading-text panel rather than AI-generated unit groups.
+- The reading-text panel title area does not show an extra sentence-count badge.
 - The reading-text panel includes a full-text recording area so a complete long passage can be recorded and played before sentence-level review.
 - Full-text recordings attach to the assignment itself and do not count as any single sentence recording.
 - Each sentence opens the sentence interaction panel for student audio input, teacher pronunciation recording, and pronunciation judgment.
+- The sentence interaction panel stays fully visible on desktop while the page scrolls; long panel content scrolls inside the panel.
+- The teacher pronunciation area does not show extra helper copy above the recording list.
 - Teacher judgment options are `准确`, `一般`, and `叽里咕噜说些什么呢`, scored as 10, 5, and 0 respectively.
 - Sentence labels show the 0-point state as `听不懂`.
 - The assignment overall score is the arithmetic average of reviewed sentence scores.
@@ -102,6 +109,7 @@ Writing assignment upload:
 
 Writing assignment detail page:
 
+- The page header includes a title editor in the former settings-button position.
 - Questions, wrong-answer filtering, and the overall review panel are shown only after AI structuring succeeds.
 - Question `______` blanks render as inline answer inputs that start at the blank width and expand with typed content.
 - Questions without `______` blanks show a student-answer textarea so every question can accept an answer.

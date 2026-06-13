@@ -3,6 +3,7 @@ import type { Route } from "next";
 import { notFound } from "next/navigation";
 
 import { AssignmentStatusBadge } from "@/components/assignment/assignment-status-badge";
+import { AssignmentTitleEditor } from "@/components/assignment/assignment-title-editor";
 import { RefreshAssignmentButton } from "@/components/assignment/refresh-assignment-button";
 import { RetryAiButton } from "@/components/assignment/retry-ai-button";
 import { WritingQuestionGroups } from "@/components/assignment/writing-question-groups";
@@ -74,8 +75,13 @@ export default async function WritingAssignmentDetailPage({
           >
             下载原始文件
           </Link>
+          <AssignmentTitleEditor
+            endpoint={`/api/assignments/writing/${assignment.id}`}
+            initialTitle={assignment.title}
+          />
         </>
       }
+      showSettings={false}
     >
       <PageShell>
         <div className="flex flex-wrap items-center justify-between gap-3">

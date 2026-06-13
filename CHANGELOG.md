@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-06-13
+
+### Changed
+
+- Matched the speaking assignment list layout and filters with the writing assignment list, including `全部`、`已批阅`、`未批阅`.
+- Replaced the settings button on writing and speaking assignment detail pages with an assignment title editor.
+- Removed extra helper copy from the speaking detail sentence panel and teacher pronunciation area.
+- Kept the speaking sentence interaction panel fully visible on desktop by making it sticky with internal scrolling.
+
 ## 2026-06-01
 
 ### Changed

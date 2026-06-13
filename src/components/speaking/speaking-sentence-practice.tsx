@@ -314,7 +314,6 @@ export function SpeakingSentencePractice({
                 句子以 ; 或 . 等句末标点拆分。点击任一句，即可录音、播放标准音并完成判断。
               </p>
             </div>
-            <Badge variant="outline">{units.length} 句</Badge>
           </div>
         </CardHeader>
         <CardContent className="p-0">
@@ -458,7 +457,7 @@ export function SpeakingSentencePractice({
         </CardContent>
       </Card>
 
-      <Card className="xl:sticky xl:top-4">
+      <Card className="xl:sticky xl:top-4 xl:max-h-[calc(100vh-14rem)] xl:overflow-hidden">
         <CardHeader>
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
@@ -471,7 +470,7 @@ export function SpeakingSentencePractice({
             )}
           </div>
         </CardHeader>
-        <CardContent className="space-y-5">
+        <CardContent className="space-y-5 xl:max-h-[calc(100vh-20rem)] xl:overflow-y-auto xl:pr-5">
           {activeUnit ? (
             <>
               <div className="rounded-2xl border border-border/70 bg-secondary/20 p-4">
@@ -524,9 +523,6 @@ export function SpeakingSentencePractice({
                 <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
                   <div>
                     <h3 className="font-semibold">教师发音</h3>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      老师可录制发音，供学生反复对照。
-                    </p>
                   </div>
                   <Button
                     variant="outline"

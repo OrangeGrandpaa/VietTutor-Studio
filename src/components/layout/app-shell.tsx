@@ -10,12 +10,14 @@ export function AppShell({
   title,
   description,
   children,
-  actions
+  actions,
+  showSettings = true
 }: {
   title: string;
   description?: string;
   children: React.ReactNode;
   actions?: React.ReactNode;
+  showSettings?: boolean;
 }) {
   return (
     <div className="min-h-screen">
@@ -51,9 +53,11 @@ export function AppShell({
             </div>
             <div className="flex flex-wrap items-center gap-3">
               {actions}
-              <Link href="/settings" className={buttonVariants({ variant: "outline" })}>
-                设置
-              </Link>
+              {showSettings ? (
+                <Link href="/settings" className={buttonVariants({ variant: "outline" })}>
+                  设置
+                </Link>
+              ) : null}
             </div>
           </header>
           {children}
