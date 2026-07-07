@@ -36,7 +36,8 @@ const writingSchema = z.object({
               "paragraph",
               "dialogue",
               "essay",
-              "vocabulary"
+              "vocabulary",
+              "reading"
             ])
           })
         )
