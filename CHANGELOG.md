@@ -1,5 +1,15 @@
 # Changelog
 
+## 2026-06-21
+
+### Added
+
+- Added a dedicated reading-comprehension display type for writing assignments, with a two-panel layout that separates reading passages from answer requirements and options.
+
+### Changed
+
+- Updated the writing structuring prompt so Kimi can mark reading-comprehension questions as `reading`.
+
 ## 2026-06-13
 
 ### Changed

@@ -28,6 +28,30 @@ describe("writing helpers", () => {
     expect(result?.parts[0]?.questions[0]?.prompt).toBe("Xin chao");
   });
 
+  it("keeps reading comprehension display hints", () => {
+    const result = normalizeWritingStructure({
+      title: "Reading demo",
+      assignment_type: "writing",
+      parts: [
+        {
+          part_title: "阅读理解",
+          instruction: "阅读短文并回答问题",
+          questions: [
+            {
+              question_number: 1,
+              prompt: "阅读下面短文\nXin chao.\n1. Ai dang noi?",
+              answer: "",
+              detected_level: "A2",
+              suggested_display_type: "reading"
+            }
+          ]
+        }
+      ]
+    });
+
+    expect(result?.parts[0]?.questions[0]?.suggested_display_type).toBe("reading");
+  });
+
   it("computes review stats from latest feedback", () => {
     const now = new Date("2026-05-07T00:00:00.000Z");
     const result = buildWritingReviewGroups(

@@ -31,6 +31,7 @@ enum DisplayType {
   DIALOGUE
   ESSAY
   VOCABULARY
+  READING
 }
 
 enum SpeakingUnitType {

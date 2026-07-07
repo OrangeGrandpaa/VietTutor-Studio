@@ -15,6 +15,8 @@ export function mapDisplayType(type: string | undefined | null) {
       return DisplayType.ESSAY;
     case "vocabulary":
       return DisplayType.VOCABULARY;
+    case "reading":
+      return DisplayType.READING;
     default:
       return DisplayType.PARAGRAPH;
   }

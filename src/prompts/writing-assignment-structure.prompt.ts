@@ -8,7 +8,8 @@ export const writingAssignmentStructurePrompt = `
 5. 这份上传文件只包含题目，不包含学生答案，因此 ` + 'answer' + ` 字段必须始终返回空字符串 ""。
 6. ` + 'title' + ` 和 ` + 'part_title' + ` 必须使用中文概括，不要使用越南语原文作为作业名称或部分名称。
 7. 如果原文标题或部分标题是越南语，请翻译或概括成中文；题目正文 ` + 'prompt' + ` 仍保留原文。
-8. 不要输出 Markdown，不要输出解释文字，只返回 JSON。
+8. 如果题型是阅读理解、读短文回答问题、根据文章选择答案等，请将 ` + 'suggested_display_type' + ` 设为 "reading"，并尽量把阅读材料、题目要求、选项都保留在同一道题目的 ` + 'prompt' + ` 中，方便页面按阅读理解版式展示。
+9. 不要输出 Markdown，不要输出解释文字，只返回 JSON。
 
 返回 JSON 格式如下：
 {
@@ -24,7 +25,7 @@ export const writingAssignmentStructurePrompt = `
           "prompt": "",
           "answer": "",
           "detected_level": "",
-          "suggested_display_type": "sentence | paragraph | dialogue | essay | vocabulary"
+          "suggested_display_type": "sentence | paragraph | dialogue | essay | vocabulary | reading"
         }
       ]
     }

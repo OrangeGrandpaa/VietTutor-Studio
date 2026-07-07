@@ -83,7 +83,8 @@ export function displayTypeLabel(type: DisplayType) {
     PARAGRAPH: "段落",
     DIALOGUE: "对话",
     ESSAY: "短文",
-    VOCABULARY: "词汇"
+    VOCABULARY: "词汇",
+    READING: "阅读理解"
   };
 
   return mapping[type];

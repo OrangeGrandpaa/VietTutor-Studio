@@ -3,7 +3,7 @@ export type WritingQuestion = {
   prompt: string;
   answer: string;
   detected_level: string;
-  suggested_display_type: "sentence" | "paragraph" | "dialogue" | "essay" | "vocabulary";
+  suggested_display_type: "sentence" | "paragraph" | "dialogue" | "essay" | "vocabulary" | "reading";
 };
 
 export type WritingPart = {

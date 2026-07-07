@@ -5,10 +5,17 @@ import { WritingQuestionReviewControls } from "@/components/assignment/writing-q
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { WritingPartReviewGroup } from "@/lib/assignment/writing";
+import { cn } from "@/lib/utils/cn";
 import { formatPercent } from "@/lib/utils/format";
 
 export function getWritingPartAnchor(partIndex: number) {
   return `writing-part-${partIndex}`;
+}
+
+function isReadingQuestion(displayType: string, partTitle: string, instruction: string, prompt: string) {
+  return /reading|阅读理解|读短文|短文阅读|阅读.{0,12}(?:短文|文章)|根据.{0,12}(?:短文|文章).{0,12}(?:回答|选择|作答)/i.test(
+    `${displayType} ${partTitle} ${instruction} ${prompt}`
+  );
 }
 
 export function WritingQuestionGroups({
@@ -58,47 +65,64 @@ export function WritingQuestionGroups({
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
-            {group.questions.map((question) => (
-              <div key={question.id} className="rounded-[1.5rem] border border-border/70 p-5">
-                <div className="mb-3 flex flex-wrap items-center gap-2">
-                  <Badge variant="outline">第 {question.questionNumber} 题</Badge>
-                  <Badge
-                    variant={
-                      question.isCorrect === true
-                        ? "success"
-                        : question.isCorrect === false
-                          ? "destructive"
-                          : "warning"
-                    }
-                  >
-                    {question.isCorrect === true ? "正确" : question.isCorrect === false ? "错误" : "待批阅"}
-                  </Badge>
-                  {question.detectedLevel ? <Badge variant="outline">{question.detectedLevel}</Badge> : null}
-                </div>
+            {group.questions.map((question) => {
+              const isReading = isReadingQuestion(
+                question.displayType,
+                group.partTitle,
+                group.instruction,
+                question.prompt
+              );
 
-                <div className="space-y-3">
-                  <div>
-                    <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">题目内容</p>
-                    <WritingAnswerEditor
-                      assignmentId={assignmentId}
-                      sectionId={question.id}
-                      initialAnswer={question.answer ?? ""}
-                      prompt={question.prompt}
-                    />
+              return (
+                <div
+                  key={question.id}
+                  className={cn(
+                    "rounded-[1.5rem] border border-border/70 p-5",
+                    isReading ? "border-primary/20 bg-secondary/20" : ""
+                  )}
+                >
+                  <div className="mb-3 flex flex-wrap items-center gap-2">
+                    <Badge variant="outline">第 {question.questionNumber} 题</Badge>
+                    {isReading ? <Badge variant="outline">阅读理解</Badge> : null}
+                    <Badge
+                      variant={
+                        question.isCorrect === true
+                          ? "success"
+                          : question.isCorrect === false
+                            ? "destructive"
+                            : "warning"
+                      }
+                    >
+                      {question.isCorrect === true ? "正确" : question.isCorrect === false ? "错误" : "待批阅"}
+                    </Badge>
+                    {question.detectedLevel ? <Badge variant="outline">{question.detectedLevel}</Badge> : null}
                   </div>
 
-                  <div className="rounded-xl border border-border/70 bg-card/70 p-4">
-                    <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">题目批阅</p>
-                    <WritingQuestionReviewControls
-                      assignmentId={assignmentId}
-                      sectionId={question.id}
-                      isCorrect={question.isCorrect}
-                      initialNote={question.note}
-                    />
+                  <div className="space-y-3">
+                    <div>
+                      <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">题目内容</p>
+                      <WritingAnswerEditor
+                        assignmentId={assignmentId}
+                        sectionId={question.id}
+                        initialAnswer={question.answer ?? ""}
+                        prompt={question.prompt}
+                        displayType={isReading ? "reading" : question.displayType}
+                      />
+                    </div>
+
+                    <div className="rounded-xl border border-border/70 bg-card/70 p-4">
+                      <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">题目批阅</p>
+                      <WritingQuestionReviewControls
+                        assignmentId={assignmentId}
+                        sectionId={question.id}
+                        isCorrect={question.isCorrect}
+                        initialNote={question.note}
+                      />
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </CardContent>
         </Card>
       ))}
