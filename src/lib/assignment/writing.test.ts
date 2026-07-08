@@ -107,4 +107,49 @@ describe("writing helpers", () => {
     expect(result.stats.correctQuestions).toBe(1);
     expect(result.stats.accuracy).toBe(100);
   });
+
+  it("builds exercise navigation groups from exercise headings", () => {
+    const now = new Date("2026-07-08T00:00:00.000Z");
+    const sections = Array.from({ length: 4 }, (_, index) => ({
+      id: `section-${index + 1}`,
+      assignmentId: "assignment-1",
+      sectionTitle: `Q${index + 1}`,
+      originalText:
+        index === 0
+          ? "练习 13：句型转换\n1. Tôi cao hơn anh ấy\n→ Anh ấy __________ tôi"
+          : `${index + 1}. Question`,
+      vietnameseText: null,
+      chineseTranslation: null,
+      detectedLevel: null,
+      displayType: "SENTENCE",
+      orderIndex: index + 1,
+      createdAt: now,
+      updatedAt: now,
+      feedbacks: []
+    }));
+
+    const result = buildWritingReviewGroups(sections, {
+      title: "Demo",
+      assignment_type: "writing",
+      parts: [
+        {
+          part_title: "题目列表",
+          instruction: "",
+          questions: sections.map((section, index) => ({
+            question_number: index + 1,
+            prompt: section.originalText,
+            answer: "",
+            detected_level: "",
+            suggested_display_type: "sentence"
+          }))
+        }
+      ]
+    });
+
+    expect(result.groups[0]?.exerciseGroups[0]).toMatchObject({
+      title: "练习 13：句型转换",
+      firstQuestionId: "section-1",
+      totalQuestions: 4
+    });
+  });
 });

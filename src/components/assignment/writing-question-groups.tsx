@@ -12,6 +12,10 @@ export function getWritingPartAnchor(partIndex: number) {
   return `writing-part-${partIndex}`;
 }
 
+export function getWritingQuestionAnchor(questionId: string) {
+  return `writing-question-${questionId}`;
+}
+
 function isReadingQuestion(displayType: string, partTitle: string, instruction: string, prompt: string) {
   return /reading|阅读理解|读短文|短文阅读|阅读.{0,12}(?:短文|文章)|根据.{0,12}(?:短文|文章).{0,12}(?:回答|选择|作答)/i.test(
     `${displayType} ${partTitle} ${instruction} ${prompt}`
@@ -75,9 +79,10 @@ export function WritingQuestionGroups({
 
               return (
                 <div
+                  id={getWritingQuestionAnchor(question.id)}
                   key={question.id}
                   className={cn(
-                    "rounded-[1.5rem] border border-border/70 p-5",
+                    "scroll-mt-24 rounded-[1.5rem] border border-border/70 p-5",
                     isReading ? "border-primary/20 bg-secondary/20" : ""
                   )}
                 >

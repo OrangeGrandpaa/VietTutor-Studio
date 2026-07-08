@@ -30,7 +30,19 @@ export type WritingPartReviewGroup = {
   reviewedQuestions: number;
   correctQuestions: number;
   accuracy: number | null;
+  exerciseGroups: WritingExerciseReviewGroup[];
   questions: WritingQuestionReviewItem[];
+};
+
+export type WritingExerciseReviewGroup = {
+  key: string;
+  title: string;
+  partIndex: number;
+  firstQuestionId: string;
+  totalQuestions: number;
+  reviewedQuestions: number;
+  correctQuestions: number;
+  accuracy: number | null;
 };
 
 export type WritingReviewStats = {
@@ -61,6 +73,72 @@ function normalizeDisplayType(value: unknown) {
 function toAccuracy(correct: number, reviewed: number) {
   if (!reviewed) return null;
   return Math.round((correct / reviewed) * 100);
+}
+
+const exerciseTitlePattern =
+  /^(?:练习|習題|习题|exercise|bài\s*tập)\s*[\d一二三四五六七八九十]+[\s:：、.\-]+.+/i;
+
+function normalizeExerciseTitle(value: string) {
+  return value
+    .replace(/\u00a0/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function extractExerciseTitle(...values: Array<string | null | undefined>) {
+  for (const value of values) {
+    const lines = normalizeText(value)
+      .split("\n")
+      .map(normalizeExerciseTitle)
+      .filter(Boolean);
+
+    const match = lines.find((line) => exerciseTitlePattern.test(line));
+
+    if (match) {
+      return match;
+    }
+  }
+
+  return null;
+}
+
+function buildExerciseGroups(
+  part: WritingPart,
+  partIndex: number,
+  questions: WritingQuestionReviewItem[]
+): WritingExerciseReviewGroup[] {
+  const groups = new Map<string, WritingQuestionReviewItem[]>();
+  const explicitPartTitle = extractExerciseTitle(part.part_title, part.instruction);
+  let currentTitle = explicitPartTitle;
+
+  for (const question of questions) {
+    currentTitle =
+      extractExerciseTitle(question.sectionTitle, question.prompt) ?? currentTitle;
+
+    if (!currentTitle) {
+      continue;
+    }
+
+    const bucket = groups.get(currentTitle) ?? [];
+    bucket.push(question);
+    groups.set(currentTitle, bucket);
+  }
+
+  return [...groups.entries()].map(([title, items], index) => {
+    const reviewedQuestions = items.filter((item) => item.isCorrect !== null).length;
+    const correctQuestions = items.filter((item) => item.isCorrect === true).length;
+
+    return {
+      key: `${partIndex}-${index}-${title}`,
+      title,
+      partIndex,
+      firstQuestionId: items[0].id,
+      totalQuestions: items.length,
+      reviewedQuestions,
+      correctQuestions,
+      accuracy: toAccuracy(correctQuestions, reviewedQuestions)
+    };
+  });
 }
 
 export function normalizeWritingStructure(value: unknown): WritingStructuredContent | null {
@@ -219,6 +297,7 @@ export function buildWritingReviewGroups(
       reviewedQuestions,
       correctQuestions,
       accuracy: toAccuracy(correctQuestions, reviewedQuestions),
+      exerciseGroups: buildExerciseGroups(part, partIndex, questions),
       questions
     } satisfies WritingPartReviewGroup;
   });
@@ -235,6 +314,7 @@ export function buildWritingReviewGroups(
       reviewedQuestions,
       correctQuestions,
       accuracy: toAccuracy(correctQuestions, reviewedQuestions),
+      exerciseGroups: [],
       questions: questionItems
     });
   }

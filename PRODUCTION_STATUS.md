@@ -117,12 +117,14 @@ Writing assignment detail page:
 - Questions, wrong-answer filtering, and the overall review panel are shown only after AI structuring succeeds.
 - Question `______` blanks render as inline answer inputs that start at the blank width and expand with typed content.
 - Questions without `______` blanks show a student-answer textarea so every question can accept an answer.
+- Multiple-choice options `A-D` render as clickable answers and save immediately, including options inside reading-comprehension questions.
+- Answer save controls sit next to the relevant answer input area to reduce vertical space.
 - The old separate student-answer textarea is not shown on fill-in-the-blank questions.
 - Saving inline answers clears existing review feedback for that question so stale feedback is not reused.
 - Review textareas start at one-line height and grow with entered content.
 - The wrong-answer filter is available in the top status area.
 - The right-side overall review panel is narrower than before and scrolls internally when content is long.
-- Overall review cards can jump to the corresponding assignment section.
+- Overall review cards can jump to the corresponding assignment section; detected exercise headings such as `练习 13：句型转换` create more specific navigation cards that jump to the first question in that exercise.
 - Section state is color-coded: pending/incomplete states are visually distinct from completed states.
 - The explicit `未批阅` status badge was removed from the overall review cards.
 - Redundant cards for question filtering and original upload summary are not shown.

@@ -1,9 +1,14 @@
 "use client";
 
-import Link from "next/link";
-
-import { getWritingPartAnchor } from "@/components/assignment/writing-question-groups";
-import type { WritingPartReviewGroup, WritingReviewStats } from "@/lib/assignment/writing";
+import {
+  getWritingPartAnchor,
+  getWritingQuestionAnchor
+} from "@/components/assignment/writing-question-groups";
+import type {
+  WritingExerciseReviewGroup,
+  WritingPartReviewGroup,
+  WritingReviewStats
+} from "@/lib/assignment/writing";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -26,6 +31,50 @@ function getGroupStatus(group: WritingPartReviewGroup) {
   return {
     className: "border-red-200 bg-red-50 text-red-950 hover:bg-red-100"
   };
+}
+
+function getExerciseStatus(group: WritingExerciseReviewGroup) {
+  if (group.totalQuestions > 0 && group.reviewedQuestions >= group.totalQuestions) {
+    return {
+      className: "border-emerald-200 bg-emerald-50 text-emerald-900 hover:bg-emerald-100"
+    };
+  }
+
+  if (group.reviewedQuestions > 0) {
+    return {
+      className: "border-amber-200 bg-amber-50 text-amber-950 hover:bg-amber-100"
+    };
+  }
+
+  return {
+    className: "border-red-200 bg-red-50 text-red-950 hover:bg-red-100"
+  };
+}
+
+function getReviewNavigationItems(groups: WritingPartReviewGroup[]) {
+  const exerciseItems = groups.flatMap((group) => group.exerciseGroups);
+
+  if (exerciseItems.length > 0) {
+    return exerciseItems.map((group) => ({
+      key: group.key,
+      title: group.title,
+      href: `#${getWritingQuestionAnchor(group.firstQuestionId)}`,
+      reviewedQuestions: group.reviewedQuestions,
+      totalQuestions: group.totalQuestions,
+      accuracy: group.accuracy,
+      className: getExerciseStatus(group).className
+    }));
+  }
+
+  return groups.map((group) => ({
+    key: `${group.partIndex}-${group.partTitle}`,
+    title: group.partTitle,
+    href: `#${getWritingPartAnchor(group.partIndex)}`,
+    reviewedQuestions: group.reviewedQuestions,
+    totalQuestions: group.totalQuestions,
+    accuracy: group.accuracy,
+    className: getGroupStatus(group).className
+  }));
 }
 
 export function WritingReviewPanel({
@@ -68,21 +117,18 @@ export function WritingReviewPanel({
           </div>
 
           <div className="max-h-[calc(100vh-23rem)] min-h-0 space-y-3 overflow-y-auto pr-2">
-            {groups.map((group) => {
-              const status = getGroupStatus(group);
-
-              return (
-                <Link
-                  key={`${group.partIndex}-${group.partTitle}`}
-                  href={`#${getWritingPartAnchor(group.partIndex)}`}
+            {getReviewNavigationItems(groups).map((group) => (
+                <a
+                  key={group.key}
+                  href={group.href}
                   className={cn(
                     "block rounded-2xl border p-4 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                    status.className
+                    group.className
                   )}
                 >
                   <div className="flex items-center justify-between gap-3">
                     <div>
-                      <p className="font-medium">{group.partTitle}</p>
+                      <p className="font-medium">{group.title}</p>
                       <p className="text-sm text-muted-foreground">
                         {group.reviewedQuestions}/{group.totalQuestions} 题已批阅
                       </p>
@@ -91,9 +137,8 @@ export function WritingReviewPanel({
                       <Badge variant="outline">{formatPercent(group.accuracy)}</Badge>
                     </div>
                   </div>
-                </Link>
-              );
-            })}
+                </a>
+              ))}
           </div>
         </CardContent>
       </Card>

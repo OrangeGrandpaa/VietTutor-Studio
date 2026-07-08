@@ -6,6 +6,9 @@
 
 - Limited writing assignment uploads to TXT, Word, Markdown, and RTF files.
 - Removed Kimi Files API extraction from the writing upload path; writing uploads now extract supported files locally before Kimi structuring.
+- Added writing review navigation cards for detected exercise headings such as `练习 13：句型转换`.
+- Changed writing multiple-choice options to clickable answers that save immediately.
+- Moved writing answer save controls next to the relevant answer input area to reduce vertical space.
 
 ## 2026-06-21
 
