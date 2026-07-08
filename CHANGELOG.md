@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-07-08
+
+### Changed
+
+- Limited writing assignment uploads to TXT, Word, Markdown, and RTF files.
+- Removed Kimi Files API extraction from the writing upload path; writing uploads now extract supported files locally before Kimi structuring.
+
 ## 2026-06-21
 
 ### Added

@@ -11,8 +11,6 @@ import type { SpeakingStructuredContent, WritingStructuredContent } from "@/type
 const DEFAULT_STRUCTURED_OUTPUT_MAX_TOKENS = 8192;
 const DEFAULT_KIMI_REQUEST_TIMEOUT_MS = 600000;
 const DEFAULT_KIMI_MAX_RETRIES = 1;
-const KIMI_FILE_EXTRACTION_MAX_POLLS = 10;
-const KIMI_FILE_EXTRACTION_POLL_INTERVAL_MS = 1200;
 
 let kimiDispatcher: Agent | null = null;
 let kimiDispatcherTimeoutMs = 0;
@@ -230,101 +228,6 @@ async function fetchKimi(operation: string, url: string, init: RequestInit) {
   }
 
   throw new Error(`Kimi ${operation} 请求失败。`, { cause: lastError });
-}
-
-type KimiFileMetadata = {
-  id: string;
-  status?: string;
-};
-
-async function fetchKimiFileMetadata(fileId: string) {
-  const { apiKey, baseUrl } = getKimiConfig();
-  const response = await fetchKimi("Files metadata", `${baseUrl}/files/${fileId}`, {
-    method: "GET",
-    headers: {
-      Authorization: `Bearer ${apiKey}`
-    },
-    cache: "no-store"
-  });
-
-  if (!response.ok) {
-    const detail = await readKimiError(response);
-    throw new Error(`Kimi Files API metadata error (${response.status}): ${detail}`);
-  }
-
-  return (await response.json()) as KimiFileMetadata;
-}
-
-async function fetchKimiFileContent(fileId: string) {
-  const { apiKey, baseUrl } = getKimiConfig();
-  const response = await fetchKimi("Files content", `${baseUrl}/files/${fileId}/content`, {
-    method: "GET",
-    headers: {
-      Authorization: `Bearer ${apiKey}`
-    },
-    cache: "no-store"
-  });
-
-  if (response.ok) {
-    return response.text();
-  }
-
-  return {
-    status: response.status,
-    detail: await readKimiError(response)
-  };
-}
-
-export async function extractTextWithKimiFilesApi(file: File) {
-  const { apiKey, baseUrl } = getKimiConfig();
-  const formData = new FormData();
-  formData.append("file", file, file.name);
-  formData.append("purpose", "file-extract");
-
-  const uploadResponse = await fetchKimi("Files upload", `${baseUrl}/files`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`
-    },
-    body: formData,
-    cache: "no-store"
-  });
-
-  if (!uploadResponse.ok) {
-    const detail = await readKimiError(uploadResponse);
-    throw new Error(`Kimi Files API upload error (${uploadResponse.status}): ${detail}`);
-  }
-
-  const uploaded = (await uploadResponse.json()) as KimiFileMetadata;
-
-  if (!uploaded.id) {
-    throw new Error("Kimi Files API 未返回 file id。");
-  }
-
-  for (let attempt = 0; attempt < KIMI_FILE_EXTRACTION_MAX_POLLS; attempt += 1) {
-    const contentResult = await fetchKimiFileContent(uploaded.id);
-
-    if (typeof contentResult === "string") {
-      return contentResult;
-    }
-
-    const metadata = await fetchKimiFileMetadata(uploaded.id);
-    const status = metadata.status?.toLowerCase();
-
-    if (status && ["failed", "error", "cancelled"].includes(status)) {
-      throw new Error(`Kimi Files API 提取失败（status=${metadata.status}）。`);
-    }
-
-    if (attempt === KIMI_FILE_EXTRACTION_MAX_POLLS - 1) {
-      throw new Error(
-        `Kimi Files API 提取超时（status=${metadata.status ?? "unknown"}，detail=${contentResult.detail}）。`
-      );
-    }
-
-    await delay(KIMI_FILE_EXTRACTION_POLL_INTERVAL_MS);
-  }
-
-  throw new Error("Kimi Files API 提取超时。");
 }
 
 export async function callKimiModel(prompt: string, input: string) {

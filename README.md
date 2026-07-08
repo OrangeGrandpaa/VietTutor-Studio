@@ -156,20 +156,15 @@ Dashboard 汇总：
 
 写作作业支持上传：
 
-- `.md`、`.markdown`、`.txt`
+- `.txt`
+- `.md`、`.markdown`
+- `.rtf`
 - `.doc`、`.docx`
-- `.pdf`
-- `.ppt`、`.pptx`
-- `.xls`、`.xlsx`
-- `.csv`
-- `.html`、`.htm`
-- `.json`、`.xml`
-- `.log`
 
 处理流程：
 
 1. 上传文件到 `uploads/assignments/writing`。
-2. 从文件抽取文本。
+2. 服务端从 TXT、Markdown、RTF、DOC 或 DOCX 中本地抽取文本。
 3. 立即创建作业记录，但不创建基础拆分题目。
 4. 返回详情页，页面只显示“AI 正在后台结构化”和刷新按钮。
 5. 通过 Next.js `after()` 在后台调用 Kimi 重新结构化。
@@ -180,6 +175,7 @@ Dashboard 汇总：
 重要行为：
 
 - 写作作业列表支持 `全部`、`已批阅`、`未批阅` 三种筛选。
+- 写作上传仅接受 TXT、Word、Markdown 和 RTF 文件；PDF、PPT、Excel、CSV、HTML、JSON、XML 等复杂格式会被拒绝。
 - 写作作业详情页右上角提供作业名称修改控件，保存后立即刷新页面标题。
 - AI 仍在后台结构化的作业会显示 `AI结构化中` 状态。
 - AI 未成功前，writing 详情页不展示基础拆分题目、错题筛选或右侧总体批阅面板。
@@ -270,12 +266,11 @@ download=1      # 可选，强制下载
 
 写作作业文本抽取在 `src/lib/assignment/source-extraction.ts`：
 
-- Markdown、txt、doc、docx 和 text/json/xml MIME 类型走本地抽取。
-- PDF、PPT、Excel、CSV、HTML、JSON、XML、log 等复杂格式走 Kimi Files API。
+- TXT、Markdown、RTF、DOC、DOCX 走本地抽取。
+- PDF、PPT、Excel、CSV、HTML、JSON、XML、log 等复杂格式不再作为笔头作业上传入口支持。
 
 Kimi 调用在 `src/lib/ai/kimi.ts`：
 
-- `/files` 和 `/files/{id}/content` 用于复杂文件抽取。
 - `/chat/completions` 用于结构化写作内容。
 - 结构化返回必须是 JSON，并通过 Zod schema 校验。
 
@@ -283,6 +278,7 @@ Fallback 在 `src/lib/ai/fallback.ts`：
 
 - 新上传的写作作业不再展示或保存基础拆分 fallback；只有 AI 结构化成功后才显示题目。
 - 口语上传当前不走 AI，也不走 fallback；TXT/RTF 会在 `src/lib/assignment/speaking-text.ts` 中本地转文本并拆句。
+- 写作上传当前不再调用 Kimi Files API 做文件提取；TXT、Markdown、RTF、DOC 和 DOCX 会在服务端本地抽取文本，再交给 Kimi 做题目结构化。
 
 当前写作提示词在：
 
@@ -484,10 +480,11 @@ HTTPS 当前使用手动部署的阿里云个人测试证书，路径见 `PRODUC
 - `certbot` 在当前环境验证不稳定，现有 HTTPS 路径是手动部署阿里云证书。
 - Kimi `finish_reason=length` 通常意味着结构化输出被截断。写作作业会显示 AI 失败原因并保留等待重试状态，可调高 `KIMI_MAX_TOKENS` 后重新调用 AI。
 - Kimi `UND_ERR_HEADERS_TIMEOUT` / `HeadersTimeoutError` 表示请求已发出但上游长时间没有返回响应头，通常是上游排队、模型响应慢、网络抖动或输入过长；可适当增大 `KIMI_REQUEST_TIMEOUT_MS` 和 `KIMI_MAX_RETRIES`。
+- 笔头作业已限制为 TXT、Word、Markdown 和 RTF。PDF/PPT/Excel/CSV/HTML/JSON/XML 等格式会直接被拒绝，应先转成支持格式再上传。
 - 口语作业已改为 TXT/RTF 本地拆句，不再调用 Kimi；如果上传 DOC/PDF/PPT 等其它格式，会直接被拒绝。
 - `.env`、`prisma/dev.db` 和 `uploads/` 都是服务器本地状态，不应该提交到 Git。
 - 部署后旧页面提交可能出现 `Failed to find Server Action`，通常刷新浏览器即可。
-- 写作上传虽已后台结构化，但复杂文件的 Kimi Files API 文本抽取仍可能比纯文本慢。
+- 写作上传会先本地抽取文本再后台结构化；如遇 Kimi 超时，通常发生在结构化阶段而不是文件提取阶段。
 
 ## Handoff Checklist
 

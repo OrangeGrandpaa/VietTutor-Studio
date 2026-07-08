@@ -8,7 +8,7 @@ export default async function NewWritingAssignmentPage() {
   return (
     <AppShell
       title="上传笔头作业"
-      description="支持本地文本直读和 Kimi Files API 两种解析路径，系统会自动选择更合适的结构化方式。"
+      description="仅支持 TXT、Markdown、RTF、DOC、DOCX 文件，上传后会自动抽取文本并进入 AI 结构化。"
     >
       <PageShell>
         <WritingUploadForm />

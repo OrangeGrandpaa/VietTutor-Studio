@@ -4,45 +4,27 @@ import mammoth from "mammoth";
 import path from "node:path";
 import WordExtractor from "word-extractor";
 
-import { extractTextWithKimiFilesApi } from "@/lib/ai/kimi";
+import { extractPlainTextFromRtf } from "@/lib/assignment/speaking-text";
 
 const wordExtractor = new WordExtractor();
 
-const LOCAL_TEXT_EXTENSIONS = new Set([".md", ".markdown", ".txt", ".doc", ".docx"]);
-const KIMI_FILE_EXTRACT_EXTENSIONS = new Set([
-  ".pdf",
-  ".ppt",
-  ".pptx",
-  ".xls",
-  ".xlsx",
-  ".csv",
-  ".html",
-  ".htm",
-  ".json",
-  ".xml",
-  ".log"
-]);
+const LOCAL_TEXT_EXTENSIONS = new Set([".md", ".markdown", ".txt", ".rtf", ".doc", ".docx"]);
+const LOCAL_TEXT_MIME_TYPES = new Set(["text/markdown", "text/plain"]);
+const RTF_MIME_TYPES = new Set(["text/rtf", "application/rtf", "application/x-rtf"]);
 
 export const assignmentUploadConfig: {
   allowedExtensions: string[];
   allowedMimeTypes: string[];
 } = {
-  allowedExtensions: [...LOCAL_TEXT_EXTENSIONS, ...KIMI_FILE_EXTRACT_EXTENSIONS],
+  allowedExtensions: [...LOCAL_TEXT_EXTENSIONS],
   allowedMimeTypes: [
     "text/markdown",
     "text/plain",
-    "text/csv",
-    "text/html",
+    "text/rtf",
+    "application/rtf",
+    "application/x-rtf",
     "application/msword",
-    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-    "application/pdf",
-    "application/vnd.ms-powerpoint",
-    "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-    "application/vnd.ms-excel",
-    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    "application/json",
-    "application/xml",
-    "text/xml"
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
   ]
 };
 
@@ -51,7 +33,7 @@ function normalizeLineBreaks(value: string) {
 }
 
 function isTextMimeType(mimeType: string) {
-  return mimeType.startsWith("text/") || mimeType === "application/json" || mimeType === "application/xml";
+  return LOCAL_TEXT_MIME_TYPES.has(mimeType);
 }
 
 async function extractLocalText(file: File, extension: string, mimeType: string) {
@@ -67,6 +49,10 @@ async function extractLocalText(file: File, extension: string, mimeType: string)
     return normalizeLineBreaks(result.getBody());
   }
 
+  if (extension === ".rtf" || RTF_MIME_TYPES.has(mimeType)) {
+    return normalizeLineBreaks(extractPlainTextFromRtf(buffer.toString("utf-8")));
+  }
+
   if (LOCAL_TEXT_EXTENSIONS.has(extension) || isTextMimeType(mimeType)) {
     return normalizeLineBreaks(buffer.toString("utf-8"));
   }
@@ -77,6 +63,10 @@ async function extractLocalText(file: File, extension: string, mimeType: string)
 export async function extractAssignmentSourceText(file: File) {
   const extension = path.extname(file.name).toLowerCase();
   const mimeType = file.type.toLowerCase();
+
+  if (extension && !LOCAL_TEXT_EXTENSIONS.has(extension)) {
+    throw new Error("笔头作业现在只支持上传 TXT、Word、Markdown 或 RTF 文件。");
+  }
 
   if (LOCAL_TEXT_EXTENSIONS.has(extension) || isTextMimeType(mimeType)) {
     const text = await extractLocalText(file, extension, mimeType);
@@ -91,18 +81,5 @@ export async function extractAssignmentSourceText(file: File) {
     };
   }
 
-  if (KIMI_FILE_EXTRACT_EXTENSIONS.has(extension)) {
-    const text = normalizeLineBreaks(await extractTextWithKimiFilesApi(file));
-
-    if (!text) {
-      throw new Error("Kimi Files API 没有返回可用文本内容。");
-    }
-
-    return {
-      text,
-      strategy: "kimi-files" as const
-    };
-  }
-
-  throw new Error("当前文件类型不支持用于作业结构化。");
+  throw new Error("笔头作业现在只支持上传 TXT、Word、Markdown 或 RTF 文件。");
 }

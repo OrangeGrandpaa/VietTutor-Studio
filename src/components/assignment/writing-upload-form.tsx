@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 const assignmentFileAccept =
-  ".md,.markdown,.txt,.doc,.docx,.pdf,.ppt,.pptx,.xls,.xlsx,.csv,.html,.htm,.json,.xml,.log,text/markdown,text/plain,text/csv,text/html,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/pdf,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/json,application/xml,text/xml";
+  ".txt,.md,.markdown,.rtf,.doc,.docx,text/plain,text/markdown,text/rtf,application/rtf,application/x-rtf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document";
 
 type WritingUploadResponse = {
   id?: string;
@@ -28,7 +28,7 @@ export function WritingUploadForm() {
       <CardHeader>
         <CardTitle>上传笔头作业</CardTitle>
         <CardDescription>
-          支持 Markdown、Word、PDF、PPT、Excel、CSV、HTML、JSON、XML 等常见文件格式。
+          支持 TXT、Markdown、RTF、DOC 和 DOCX 文件，上传后会进入 AI 结构化流程。
         </CardDescription>
       </CardHeader>
       <CardContent>

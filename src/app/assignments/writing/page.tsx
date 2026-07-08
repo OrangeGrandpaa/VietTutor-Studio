@@ -90,7 +90,7 @@ export default async function WritingAssignmentsPage({
   return (
     <AppShell
       title="笔头作业"
-      description="支持 Markdown、DOC、DOCX 直读，以及 PDF、PPT、Excel 等复杂文档的自动抽取。"
+      description="支持 TXT、Markdown、RTF、DOC、DOCX 文件上传，系统会抽取文本并自动结构化题目。"
       actions={
         <Link href="/assignments/writing/new" className={buttonVariants()}>
           新建作业

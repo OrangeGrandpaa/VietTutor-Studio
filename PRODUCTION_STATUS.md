@@ -39,6 +39,7 @@ Latest repository state documented by this status file:
 
 - Course materials no longer store learning progress, learning status, page counts, or notes; material detail pages only show metadata, download, and preview.
 - Assignment and material list pages are paginated, dashboard metrics use database aggregates, and protected file responses support streaming with HTTP `Range` plus optional Nginx `X-Accel-Redirect`.
+- Writing uploads accept only TXT, Word, Markdown, and RTF files, with local text extraction before Kimi structuring.
 - Writing detail page inline-blank answer inputs and Chinese structuring-name normalization are included in the documented behavior.
 - Writing and speaking detail pages replace the global settings button with an assignment title editor.
 - Speaking assignments accept TXT and RTF, split sentences locally without Kimi, support filtered list views, full-text recordings, per-sentence student recordings, teacher pronunciation recordings, and 10/5/0 pronunciation judgments.
@@ -100,8 +101,11 @@ Speaking assignment detail page:
 
 Writing assignment upload:
 
+- Uploads accept only `.txt`, `.md`, `.markdown`, `.rtf`, `.doc`, and `.docx` files.
+- PDF/PPT/Excel/CSV/HTML/JSON/XML/log and other complex formats are rejected before assignment creation.
+- The server extracts supported writing files locally; Kimi Files API is no longer used for writing file extraction.
 - Uploads should return quickly and enter the assignment detail page.
-- Kimi document structuring runs after upload.
+- Kimi document structuring runs after upload using the locally extracted text.
 - New writing uploads do not save or display the local fallback/basic split.
 - While structuring is still pending, the detail page shows only a pending notice and a manual refresh button.
 - Automatic polling is intentionally not enabled.
@@ -131,7 +135,7 @@ AI configuration:
 - `KIMI_REQUEST_TIMEOUT_MS` and `KIMI_MAX_RETRIES` are configurable in the server `.env` for slow upstream responses or transient Kimi network failures.
 - The user intended to set production to `KIMI_MAX_TOKENS="16384"` after seeing length-limited Kimi responses.
 - `.env` is server-local and is not committed to Git.
-- Kimi configuration currently affects writing assignment extraction/structuring; speaking assignments no longer depend on Kimi.
+- Kimi configuration currently affects writing assignment structuring only; writing file text extraction is local, and speaking assignments no longer depend on Kimi.
 
 Course materials:
 
@@ -237,6 +241,7 @@ The script installs dependencies from `package-lock.json`, builds the app, and r
 - Browser-side `Failed to find Server Action` logs can occur after deployments when an old page submits against a newer build; refreshing the browser usually clears it.
 - Kimi `HeadersTimeoutError` / `UND_ERR_HEADERS_TIMEOUT` means the upstream did not return response headers in time; it is normally not a document-format issue. Tune `KIMI_REQUEST_TIMEOUT_MS` / `KIMI_MAX_RETRIES` and restart `vietutor-studio`.
 - Kimi `.env` changes such as `KIMI_MAX_TOKENS`, `KIMI_REQUEST_TIMEOUT_MS`, or `KIMI_MAX_RETRIES` require restarting `vietutor-studio`.
+- Writing uploads now require TXT, Word, Markdown, or RTF. If a teacher tries to upload PDF/PPT/Excel/CSV/HTML/JSON/XML/log as a writing assignment, the upload should fail by design.
 - Speaking uploads now require TXT or RTF. If a teacher tries to upload DOC/PDF/PPT as a speaking assignment, the upload should fail by design.
 
 ## Verification

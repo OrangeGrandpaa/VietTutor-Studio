@@ -92,7 +92,7 @@ Notes:
 - `DATABASE_URL="file:./dev.db"` stores SQLite at `prisma/dev.db`.
 - `KIMI_MAX_TOKENS` controls the Kimi structured-output token budget. Production may set this higher, for example `16384`, if the selected model supports it.
 - `KIMI_REQUEST_TIMEOUT_MS` controls the upstream Kimi HTTP timeout. `KIMI_MAX_RETRIES` controls retries for transient network/upstream timeout failures.
-- Kimi is currently used for writing assignment extraction/structuring. Speaking assignments accept TXT/RTF and do not call Kimi.
+- Kimi is currently used for writing assignment structuring. Writing file text extraction is local and limited to TXT, Word, Markdown, and RTF; speaking assignments accept TXT/RTF and do not call Kimi.
 - `PROTECTED_FILE_ACCEL_REDIRECT_PREFIX="/_protected_uploads/"` enables Nginx `X-Accel-Redirect` for protected uploads after the internal Nginx location below is configured.
 
 ## 5. Install Dependencies and Initialize Data
@@ -311,10 +311,10 @@ systemctl status nginx --no-pager
 tail -n 100 /var/log/nginx/error.log
 ```
 
-If upload requests return `504`, confirm `proxy_read_timeout` is high enough. Writing uploads now return quickly and run AI structuring in the background, but large PDF/PPT/Excel extraction can still take longer than simple text uploads.
+If upload requests return `504`, confirm `proxy_read_timeout` is high enough. Writing uploads now return quickly and run AI structuring in the background; PDF/PPT/Excel and other complex writing uploads are rejected instead of being sent through Kimi Files API extraction.
 
 If Kimi structuring reports `finish_reason=length`, increase `KIMI_MAX_TOKENS` in the server `.env` if the model supports it, restart the service, and use the writing detail page retry button. New writing uploads no longer show or retain the local basic split as the visible question structure.
 
 If Kimi structuring reports `UND_ERR_HEADERS_TIMEOUT` or `HeadersTimeoutError`, the request reached the upstream service but no response headers arrived before timeout. This is usually upstream queueing, slow model generation, network jitter, or very large input. Increase `KIMI_REQUEST_TIMEOUT_MS` and/or `KIMI_MAX_RETRIES`, then restart `vietutor-studio`.
 
-Speaking assignments intentionally accept only `.txt` and `.rtf` files after the speaking upload update. DOC/PDF/PPT speaking uploads should fail validation; use writing assignments for AI/Kimi document structuring workflows.
+Writing assignments intentionally accept only TXT, Word, Markdown, and RTF files. Speaking assignments intentionally accept only `.txt` and `.rtf` files. Unsupported uploads should fail validation; convert source documents to a supported format before uploading.
