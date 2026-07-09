@@ -2,6 +2,7 @@ import { AssignmentStatus, Prisma } from "@prisma/client";
 import { NextRequest } from "next/server";
 
 import { structureWritingAssignment } from "@/lib/ai/kimi";
+import { repairTextMojibake } from "@/lib/assignment/text-encoding";
 import { flattenWritingQuestions } from "@/lib/assignment/writing";
 import { ensureAuthenticatedApi } from "@/lib/auth/session";
 import { prisma } from "@/lib/db/prisma";
@@ -51,7 +52,8 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
 
   if (body?.action === "retry-ai") {
     try {
-      const structured = await structureWritingAssignment(assignment.originalContent);
+      const sourceText = repairTextMojibake(assignment.originalContent);
+      const structured = await structureWritingAssignment(sourceText);
       const questions = flattenWritingQuestions(structured);
 
       await prisma.$transaction(async (tx) => {
@@ -62,6 +64,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
           where: { id },
           data: {
             title: structured.title || assignment.title,
+            originalContent: sourceText,
             aiStructuredContent: structured as unknown as Prisma.InputJsonValue,
             aiStatus: "SUCCEEDED",
             aiErrorMessage: null,

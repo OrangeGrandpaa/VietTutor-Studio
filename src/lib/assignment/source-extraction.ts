@@ -5,6 +5,11 @@ import path from "node:path";
 import WordExtractor from "word-extractor";
 
 import { extractPlainTextFromRtf } from "@/lib/assignment/speaking-text";
+import {
+  decodeRtfSourceBuffer,
+  decodeTextBuffer,
+  repairTextMojibake
+} from "@/lib/assignment/text-encoding";
 
 const wordExtractor = new WordExtractor();
 
@@ -41,20 +46,22 @@ async function extractLocalText(file: File, extension: string, mimeType: string)
 
   if (extension === ".docx") {
     const result = await mammoth.extractRawText({ buffer });
-    return normalizeLineBreaks(result.value);
+    return normalizeLineBreaks(repairTextMojibake(result.value));
   }
 
   if (extension === ".doc") {
     const result = await wordExtractor.extract(buffer);
-    return normalizeLineBreaks(result.getBody());
+    return normalizeLineBreaks(repairTextMojibake(result.getBody()));
   }
 
   if (extension === ".rtf" || RTF_MIME_TYPES.has(mimeType)) {
-    return normalizeLineBreaks(extractPlainTextFromRtf(buffer.toString("utf-8")));
+    return normalizeLineBreaks(
+      repairTextMojibake(extractPlainTextFromRtf(decodeRtfSourceBuffer(buffer)))
+    );
   }
 
   if (LOCAL_TEXT_EXTENSIONS.has(extension) || isTextMimeType(mimeType)) {
-    return normalizeLineBreaks(buffer.toString("utf-8"));
+    return normalizeLineBreaks(decodeTextBuffer(buffer));
   }
 
   return "";

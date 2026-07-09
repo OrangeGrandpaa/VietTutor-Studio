@@ -104,6 +104,7 @@ Writing assignment upload:
 - Uploads accept only `.txt`, `.md`, `.markdown`, `.rtf`, `.doc`, and `.docx` files.
 - PDF/PPT/Excel/CSV/HTML/JSON/XML/log and other complex formats are rejected before assignment creation.
 - The server extracts supported writing files locally; Kimi Files API is no longer used for writing file extraction.
+- Text extraction repairs common Chinese encoding issues, including GBK/GB18030 source files and Latin-1 mojibake such as `ÄÑÊÜ`.
 - Uploads should return quickly and enter the assignment detail page.
 - Kimi document structuring runs after upload using the locally extracted text.
 - New writing uploads do not save or display the local fallback/basic split.

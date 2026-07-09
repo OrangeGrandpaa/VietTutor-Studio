@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-07-09
+
+### Fixed
+
+- Fixed writing assignment text extraction and display for Chinese content that was decoded as Latin-1 mojibake, such as `ÄÑÊÜ` instead of `难受`.
+- Added GBK/GB18030 fallback decoding for writing TXT/Markdown uploads and mojibake repair for RTF, DOC, DOCX, and stored writing structure text.
+
 ## 2026-07-08
 
 ### Changed

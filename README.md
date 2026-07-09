@@ -269,6 +269,8 @@ download=1      # 可选，强制下载
 写作作业文本抽取在 `src/lib/assignment/source-extraction.ts`：
 
 - TXT、Markdown、RTF、DOC、DOCX 走本地抽取。
+- TXT、Markdown 优先按 UTF-8 严格解码，失败后回退到 GBK/GB18030，避免中文旧编码文件进入题目时变成乱码。
+- RTF、DOC、DOCX 抽取后的文本会做常见中文 mojibake 修复，例如把 `ÄÑÊÜ` 还原为 `难受`。
 - PDF、PPT、Excel、CSV、HTML、JSON、XML、log 等复杂格式不再作为笔头作业上传入口支持。
 
 Kimi 调用在 `src/lib/ai/kimi.ts`：

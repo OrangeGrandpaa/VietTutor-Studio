@@ -1,5 +1,6 @@
 import type { AiProcessStatus, AssignmentSection, TeacherFeedback } from "@prisma/client";
 
+import { repairTextMojibake } from "@/lib/assignment/text-encoding";
 import type { WritingPart, WritingStructuredContent } from "@/types/assignment";
 
 type SectionWithFeedbacks = AssignmentSection & {
@@ -54,7 +55,7 @@ export type WritingReviewStats = {
 };
 
 function normalizeText(value: unknown) {
-  return typeof value === "string" ? value.trim() : "";
+  return typeof value === "string" ? repairTextMojibake(value).trim() : "";
 }
 
 function normalizeQuestionText(value: unknown) {
