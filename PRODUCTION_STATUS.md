@@ -122,6 +122,7 @@ Writing assignment detail page:
 - Question `______` blanks render as inline answer inputs that start at the blank width and expand with typed content.
 - Questions without `______` blanks show a student-answer textarea so every question can accept an answer.
 - Multiple-choice options `A-D` render as clickable answers and save immediately, including options inside reading-comprehension questions.
+- Reading-comprehension blocks with multiple choice sub-questions save one answer per sub-question, so later selections do not overwrite earlier answers.
 - Answer save controls sit next to the relevant answer input area to reduce vertical space.
 - The old separate student-answer textarea is not shown on fill-in-the-blank questions.
 - Saving inline answers clears existing review feedback for that question so stale feedback is not reused.

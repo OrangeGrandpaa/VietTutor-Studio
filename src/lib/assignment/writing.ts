@@ -7,6 +7,7 @@ import {
   type CompletionStatus,
   type ItemProgressStatus
 } from "@/lib/assignment/progress-status";
+import { getChoiceAnswerStats } from "@/lib/assignment/choice-questions";
 import { repairTextMojibake } from "@/lib/assignment/text-encoding";
 import type { WritingPart, WritingStructuredContent } from "@/types/assignment";
 
@@ -116,6 +117,20 @@ export function getWritingQuestionCompletionStatus(
   prompt: string,
   answer: string | null | undefined
 ): CompletionStatus {
+  const choiceStats = getChoiceAnswerStats(prompt, answer);
+
+  if (choiceStats) {
+    if (choiceStats.answered === 0) {
+      return "NOT_STARTED";
+    }
+
+    if (choiceStats.answered < choiceStats.total) {
+      return "IN_PROGRESS";
+    }
+
+    return "COMPLETED";
+  }
+
   const blankCount = getBlankCount(prompt);
   const values = parseAnswerValues(answer, blankCount);
   const filledCount = values.filter((value) => value.trim().length > 0).length;

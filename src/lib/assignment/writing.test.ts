@@ -164,4 +164,22 @@ describe("writing helpers", () => {
     expect(getWritingQuestionCompletionStatus(prompt, JSON.stringify(["cao hơn", ""]))).toBe("IN_PROGRESS");
     expect(getWritingQuestionCompletionStatus(prompt, JSON.stringify(["cao hơn", "giống"]))).toBe("COMPLETED");
   });
+
+  it("detects incomplete multi-question reading choices", () => {
+    const prompt = [
+      "阅读短文并选择正确答案",
+      "Hôm nay tôi đi học.",
+      "1. Người nói đi đâu?",
+      "A. Đi học",
+      "B. Đi chơi",
+      "2. Hôm nay người nói làm gì?",
+      "A. Ngủ",
+      "B. Đi học"
+    ].join("\n");
+
+    expect(getWritingQuestionCompletionStatus(prompt, null)).toBe("NOT_STARTED");
+    expect(getWritingQuestionCompletionStatus(prompt, "A. Đi học")).toBe("IN_PROGRESS");
+    expect(getWritingQuestionCompletionStatus(prompt, JSON.stringify(["A. Đi học", ""]))).toBe("IN_PROGRESS");
+    expect(getWritingQuestionCompletionStatus(prompt, JSON.stringify(["A. Đi học", "B. Đi học"]))).toBe("COMPLETED");
+  });
 });

@@ -7,6 +7,18 @@ import { toast } from "sonner";
 import { AutoResizeTextarea } from "@/components/ui/auto-resize-textarea";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  buildChoiceQuestionGroups,
+  getChoiceOptions,
+  getPromptLines,
+  isSelectedChoice,
+  normalizeQuestionPrompt,
+  parseChoiceAnswerValues,
+  parseChoiceOption,
+  questionStartPattern,
+  serializeChoiceAnswers,
+  type ChoiceOption
+} from "@/lib/assignment/choice-questions";
 import { cn } from "@/lib/utils/cn";
 
 type PromptPart =
@@ -24,25 +36,6 @@ const readingTypePattern =
   /reading|阅读理解|读短文|短文阅读|阅读.{0,12}(?:短文|文章)|根据.{0,12}(?:短文|文章).{0,12}(?:回答|选择|作答)/i;
 const readingInstructionPattern =
   /^(?:根据|阅读|读|请阅读|回答|选择|questions?|answer|read|trả lời|đọc|câu hỏi)/i;
-const questionStartPattern =
-  /^(?:câu|question|q)\s*\d+[\s.、):：-]|^(?:第\s*)?\d+\s*[.、)、):：]\s*\S|^(?:问题|题目|选择题|回答问题|questions?|câu hỏi)/i;
-const optionPattern = /^([A-Da-d])\s*[.、)、):：]\s*(\S.*)$/;
-
-function normalizeQuestionPrompt(prompt: string) {
-  return prompt
-    .replace(/[\u2028\u2029]/g, "\n")
-    .split("\n")
-    .map((line) => line.trimEnd())
-    .filter((line) => line.trim().length > 0)
-    .join("\n");
-}
-
-function getPromptLines(prompt: string) {
-  return normalizeQuestionPrompt(prompt)
-    .split("\n")
-    .map((line) => line.trim())
-    .filter(Boolean);
-}
 
 function splitPrompt(prompt: string): PromptPart[] {
   const normalized = normalizeQuestionPrompt(prompt);
@@ -107,47 +100,6 @@ function serializeAnswers(answers: string[]) {
   return JSON.stringify(answers);
 }
 
-type ChoiceOption = {
-  label: string;
-  text: string;
-  value: string;
-};
-
-function parseChoiceOption(line: string): ChoiceOption | null {
-  const match = line.match(optionPattern);
-
-  if (!match) {
-    return null;
-  }
-
-  const label = match[1].toUpperCase();
-  const text = match[2].trim();
-
-  return {
-    label,
-    text,
-    value: `${label}. ${text}`
-  };
-}
-
-function getChoiceOptions(prompt: string) {
-  return getPromptLines(prompt).flatMap((line) => {
-    const option = parseChoiceOption(line);
-    return option ? [option] : [];
-  });
-}
-
-function isSelectedChoice(answer: string, option: ChoiceOption) {
-  const normalized = answer.trim();
-  return (
-    normalized === option.label ||
-    normalized.toUpperCase() === option.label ||
-    normalized === option.value ||
-    normalized === `${option.label}${option.text}` ||
-    normalized === option.text
-  );
-}
-
 function isReadingDisplay(displayType?: string, prompt?: string) {
   return readingTypePattern.test(displayType ?? "") || readingTypePattern.test(prompt ?? "");
 }
@@ -208,17 +160,18 @@ function ChoiceOptionButton({
 
 function ReadingPromptView({
   prompt,
-  selectedAnswer,
+  selectedAnswers,
   saving,
   onChoiceSelect
 }: {
   prompt: string;
-  selectedAnswer: string;
+  selectedAnswers: string[];
   saving: boolean;
-  onChoiceSelect: (option: ChoiceOption) => void;
+  onChoiceSelect: (questionIndex: number, option: ChoiceOption) => void;
 }) {
   const { instructionLines, passageLines, questionLines } = parseReadingPrompt(prompt);
   const hasQuestionLines = questionLines.length > 0;
+  const choiceQuestionGroups = buildChoiceQuestionGroups(questionLines);
 
   return (
     <div className="grid gap-4 lg:grid-cols-[minmax(0,1.15fr)_minmax(19rem,0.85fr)]">
@@ -250,7 +203,32 @@ function ReadingPromptView({
             </div>
           ) : null}
 
-          {hasQuestionLines ? (
+          {choiceQuestionGroups.length > 0 ? (
+            <div className="space-y-4">
+              {choiceQuestionGroups.map((group, groupIndex) => (
+                <div key={`${group.questionLines.join(" ")}-${groupIndex}`} className="rounded-xl bg-muted/35 p-3">
+                  <div className="space-y-1">
+                    {group.questionLines.map((line, lineIndex) => (
+                      <p key={`${line}-${lineIndex}`} className="bg-transparent px-0 font-semibold text-foreground">
+                        {line}
+                      </p>
+                    ))}
+                  </div>
+                  <div className="mt-3 space-y-2">
+                    {group.options.map((option) => (
+                      <ChoiceOptionButton
+                        key={`${groupIndex}-${option.label}-${option.text}`}
+                        option={option}
+                        selected={isSelectedChoice(selectedAnswers[groupIndex] ?? "", option)}
+                        saving={saving}
+                        onSelect={(selectedOption) => onChoiceSelect(groupIndex, selectedOption)}
+                      />
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : hasQuestionLines ? (
             <div className="space-y-2">
               {questionLines.map((line, index) => {
                 const option = parseChoiceOption(line);
@@ -259,9 +237,9 @@ function ReadingPromptView({
                   <ChoiceOptionButton
                     key={`${line}-${index}`}
                     option={option}
-                    selected={isSelectedChoice(selectedAnswer, option)}
+                    selected={isSelectedChoice(selectedAnswers[0] ?? "", option)}
                     saving={saving}
-                    onSelect={onChoiceSelect}
+                    onSelect={(selectedOption) => onChoiceSelect(0, selectedOption)}
                   />
                 ) : (
                   <p key={`${line}-${index}`} className="bg-transparent px-0 font-semibold text-foreground">
@@ -394,11 +372,19 @@ export function WritingAnswerEditor({
   const router = useRouter();
   const promptParts = splitPrompt(prompt);
   const blankCount = promptParts.filter((part) => part.type === "blank").length;
-  const [answers, setAnswers] = useState(() => parseInitialAnswers(initialAnswer, blankCount));
-  const [saving, setSaving] = useState(false);
-  const answer = serializeAnswers(answers);
-  const isDirty = answer !== initialAnswer;
   const isReading = isReadingDisplay(displayType, prompt);
+  const readingChoiceGroups = isReading
+    ? buildChoiceQuestionGroups(parseReadingPrompt(prompt).questionLines)
+    : [];
+  const [answers, setAnswers] = useState(() =>
+    readingChoiceGroups.length > 0
+      ? parseChoiceAnswerValues(initialAnswer, readingChoiceGroups.length)
+      : parseInitialAnswers(initialAnswer, blankCount)
+  );
+  const [saving, setSaving] = useState(false);
+  const answer =
+    readingChoiceGroups.length > 0 ? serializeChoiceAnswers(answers) : serializeAnswers(answers);
+  const isDirty = answer !== initialAnswer;
   const choiceOptions = getChoiceOptions(prompt);
   const isChoiceQuestion = blankCount === 0 && choiceOptions.length >= 2;
 
@@ -436,6 +422,15 @@ export function WritingAnswerEditor({
     await saveAnswer(nextAnswer);
   }
 
+  async function selectReadingChoice(questionIndex: number, option: ChoiceOption) {
+    const nextAnswers = Array.from({ length: readingChoiceGroups.length }, (_, index) => answers[index] ?? "");
+    nextAnswers[questionIndex] = option.value;
+    const nextAnswer = serializeChoiceAnswers(nextAnswers);
+
+    setAnswers(nextAnswers);
+    await saveAnswer(nextAnswer);
+  }
+
   const saveButton = (
     <Button type="button" variant="outline" disabled={saving || !isDirty} onClick={() => saveAnswer()}>
       {saving ? "保存中..." : isDirty ? "保存答案" : "答案已保存"}
@@ -447,9 +442,9 @@ export function WritingAnswerEditor({
       {isReading ? (
         <ReadingPromptView
           prompt={prompt}
-          selectedAnswer={answers[0] ?? ""}
+          selectedAnswers={answers}
           saving={saving}
-          onChoiceSelect={selectChoice}
+          onChoiceSelect={selectReadingChoice}
         />
       ) : isChoiceQuestion ? (
         <ChoicePromptView
