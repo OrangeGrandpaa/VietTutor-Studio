@@ -4,6 +4,7 @@ import type { SpeakingReviewGroup, SpeakingReviewStats } from "@/lib/assignment/
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
+import { progressStatusLabel } from "@/lib/assignment/progress-status";
 import { formatScore } from "@/lib/utils/format";
 
 export function SpeakingReviewPanel({
@@ -52,10 +53,13 @@ export function SpeakingReviewPanel({
                   <div>
                     <p className="font-medium">{group.label}</p>
                     <p className="text-sm text-muted-foreground">
-                      {group.reviewedUnits}/{group.totalUnits} 句已批阅
+                      已录音 {group.recordedUnits}/{group.totalUnits}，已批阅 {group.reviewedUnits}
                     </p>
                   </div>
-                  <Badge variant="outline">{formatScore(group.averageOverallScore)}</Badge>
+                  <div className="flex flex-col items-end gap-2">
+                    <Badge variant="outline">{progressStatusLabel(group.progressStatus)}</Badge>
+                    <Badge variant="outline">{formatScore(group.averageOverallScore)}</Badge>
+                  </div>
                 </div>
               </div>
             ))}

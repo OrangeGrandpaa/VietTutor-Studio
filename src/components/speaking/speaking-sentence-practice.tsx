@@ -8,6 +8,11 @@ import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  getItemProgressStatus,
+  progressStatusLabel,
+  type ItemProgressStatus
+} from "@/lib/assignment/progress-status";
 import { cn } from "@/lib/utils/cn";
 
 type RecordingKind = "STUDENT" | "TEACHER_STANDARD";
@@ -75,6 +80,29 @@ function reviewBadge(level: ReviewLevel | null) {
     default:
       return { label: "待判断", className: "border-border bg-card text-muted-foreground" };
   }
+}
+
+function progressBadge(status: ItemProgressStatus) {
+  switch (status) {
+    case "REVIEWED":
+      return { label: progressStatusLabel(status), className: "border-emerald-200 bg-emerald-50 text-emerald-700" };
+    case "UNREVIEWED":
+      return { label: progressStatusLabel(status), className: "border-border bg-card text-muted-foreground" };
+    case "IN_PROGRESS":
+      return { label: progressStatusLabel(status), className: "border-amber-200 bg-amber-50 text-amber-700" };
+    case "NOT_STARTED":
+    default:
+      return { label: progressStatusLabel("NOT_STARTED"), className: "border-red-200 bg-red-50 text-red-700" };
+  }
+}
+
+function getUnitProgressStatus(unit: SpeakingSentenceUnit) {
+  const studentRecordings = unit.recordings.filter((recording) => recording.kind === "STUDENT");
+
+  return getItemProgressStatus({
+    completionStatus: studentRecordings.length > 0 ? "COMPLETED" : "NOT_STARTED",
+    isReviewed: unit.reviewScore !== null && unit.reviewScore !== undefined
+  });
 }
 
 function formatDuration(duration: number | null) {
@@ -421,7 +449,8 @@ export function SpeakingSentencePractice({
 
             <div className="space-y-1.5 text-base leading-6 text-foreground/85 sm:text-lg sm:leading-7">
               {units.map((unit) => {
-                const badge = reviewBadge(unit.reviewLevel);
+                const statusBadge = progressBadge(getUnitProgressStatus(unit));
+                const resultBadge = reviewBadge(unit.reviewLevel);
                 const isActive = unit.id === activeUnit?.id;
 
                 return (
@@ -444,11 +473,21 @@ export function SpeakingSentencePractice({
                     <span
                       className={cn(
                         "ml-3 inline-flex rounded-full border px-2 py-0.5 align-middle font-sans text-xs",
-                        badge.className
+                        statusBadge.className
                       )}
                     >
-                      {badge.label}
+                      {statusBadge.label}
                     </span>
+                    {unit.reviewLevel ? (
+                      <span
+                        className={cn(
+                          "ml-2 inline-flex rounded-full border px-2 py-0.5 align-middle font-sans text-xs",
+                          resultBadge.className
+                        )}
+                      >
+                        {resultBadge.label}
+                      </span>
+                    ) : null}
                   </button>
                 );
               })}
@@ -463,11 +502,14 @@ export function SpeakingSentencePractice({
             <div>
               <CardTitle>句子互动窗体</CardTitle>
             </div>
-            {activeUnit?.reviewScore !== null && activeUnit?.reviewScore !== undefined ? (
-              <Badge variant="outline">{activeUnit.reviewScore} 分</Badge>
-            ) : (
-              <Badge variant="warning">待判断</Badge>
-            )}
+            <div className="flex flex-wrap items-center gap-2">
+              {activeUnit ? (
+                <Badge variant="outline">{progressStatusLabel(getUnitProgressStatus(activeUnit))}</Badge>
+              ) : null}
+              {activeUnit?.reviewScore !== null && activeUnit?.reviewScore !== undefined ? (
+                <Badge variant="outline">{activeUnit.reviewScore} 分</Badge>
+              ) : null}
+            </div>
           </div>
         </CardHeader>
         <CardContent className="space-y-5 xl:max-h-[calc(100vh-20rem)] xl:overflow-y-auto xl:pr-5">

@@ -4,6 +4,10 @@ import { WritingAnswerEditor } from "@/components/assignment/writing-answer-edit
 import { WritingQuestionReviewControls } from "@/components/assignment/writing-question-review-controls";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  progressStatusLabel,
+  type ItemProgressStatus
+} from "@/lib/assignment/progress-status";
 import type { WritingPartReviewGroup } from "@/lib/assignment/writing";
 import { cn } from "@/lib/utils/cn";
 import { formatPercent } from "@/lib/utils/format";
@@ -20,6 +24,20 @@ function isReadingQuestion(displayType: string, partTitle: string, instruction: 
   return /reading|阅读理解|读短文|短文阅读|阅读.{0,12}(?:短文|文章)|根据.{0,12}(?:短文|文章).{0,12}(?:回答|选择|作答)/i.test(
     `${displayType} ${partTitle} ${instruction} ${prompt}`
   );
+}
+
+function itemProgressVariant(status: ItemProgressStatus) {
+  switch (status) {
+    case "REVIEWED":
+      return "success";
+    case "IN_PROGRESS":
+      return "warning";
+    case "NOT_STARTED":
+      return "destructive";
+    case "UNREVIEWED":
+    default:
+      return "outline";
+  }
 }
 
 export function WritingQuestionGroups({
@@ -64,6 +82,7 @@ export function WritingQuestionGroups({
               </div>
               <div className="flex flex-wrap gap-2">
                 <Badge variant="outline">{group.questions.length} 题</Badge>
+                <Badge variant="outline">已作答 {group.completedQuestions}</Badge>
                 <Badge variant="outline">准确率 {formatPercent(group.accuracy)}</Badge>
               </div>
             </div>
@@ -89,17 +108,14 @@ export function WritingQuestionGroups({
                   <div className="mb-3 flex flex-wrap items-center gap-2">
                     <Badge variant="outline">第 {question.questionNumber} 题</Badge>
                     {isReading ? <Badge variant="outline">阅读理解</Badge> : null}
-                    <Badge
-                      variant={
-                        question.isCorrect === true
-                          ? "success"
-                          : question.isCorrect === false
-                            ? "destructive"
-                            : "warning"
-                      }
-                    >
-                      {question.isCorrect === true ? "正确" : question.isCorrect === false ? "错误" : "待批阅"}
+                    <Badge variant={itemProgressVariant(question.progressStatus)}>
+                      {progressStatusLabel(question.progressStatus)}
                     </Badge>
+                    {question.isCorrect !== null ? (
+                      <Badge variant={question.isCorrect ? "success" : "destructive"}>
+                        {question.isCorrect ? "正确" : "错误"}
+                      </Badge>
+                    ) : null}
                     {question.detectedLevel ? <Badge variant="outline">{question.detectedLevel}</Badge> : null}
                   </div>
 

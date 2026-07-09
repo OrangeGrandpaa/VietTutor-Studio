@@ -70,12 +70,14 @@ Writing assignment list page:
 - The list is paginated to keep page render and query time stable as history grows.
 - List cards are compact and place `查看` / `删除` actions beside each assignment record.
 - Assignments with pending AI processing show `AI结构化中`.
+- Writing cards derive visible progress from answers and reviews: `还没做:3`, `还没做完！`, `未批阅`, `批阅中`, or `已批阅`.
 
 Speaking assignment list page:
 
 - The list supports `全部`, `已批阅`, and `未批阅` filters.
-- The list is paginated and only loads card-rendering fields plus the unit count.
+- The list is paginated and loads only card-rendering fields plus minimal unit recording/review markers for progress status.
 - List cards use the same compact structure as writing assignments, with `查看` / `删除` actions beside each record.
+- Speaking cards derive visible progress from student recordings and teacher judgments: `还没做:3`, `还没做完！`, `未批阅`, `批阅中`, or `已批阅`.
 
 Speaking assignment upload:
 
@@ -96,6 +98,7 @@ Speaking assignment detail page:
 - The teacher pronunciation area does not show extra helper copy above the recording list.
 - Teacher judgment options are `准确`, `一般`, and `叽里咕噜说些什么呢`, scored as 10, 5, and 0 respectively.
 - Sentence labels show the 0-point state as `听不懂`.
+- Sentence chips also show the per-sentence progress state; no student recording is `还没做:3`, a recorded but unjudged sentence is `未批阅`, and a judged sentence is `已批阅` with the pronunciation result kept separately.
 - The assignment overall score is the arithmetic average of reviewed sentence scores.
 - Recording panels support pause, stop, save, retry, and cancel. Retry keeps the current full-text or sentence target active; cancel discards unsaved audio and closes the recording panel.
 
@@ -127,7 +130,7 @@ Writing assignment detail page:
 - The right-side overall review panel is narrower than before and scrolls internally when content is long.
 - Overall review cards can jump to the corresponding assignment section; detected exercise headings such as `练习 13：句型转换` create more specific navigation cards that jump to the first question in that exercise.
 - Section state is color-coded: pending/incomplete states are visually distinct from completed states.
-- The explicit `未批阅` status badge was removed from the overall review cards.
+- Writing question cards and overall review navigation cards show derived progress states: `还没做:3`, `还没做完！`, `未批阅`, `批阅中`, or `已批阅`.
 - Redundant cards for question filtering and original upload summary are not shown.
 - AI structuring failures show fuller error details when available, including nested `cause` information.
 - AI structuring removes blank lines inside a single question and keeps assignment/part names in Chinese.

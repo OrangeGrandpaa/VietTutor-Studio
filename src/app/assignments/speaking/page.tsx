@@ -11,6 +11,7 @@ import { DeleteButton } from "@/components/ui/delete-button";
 import { PaginationControls } from "@/components/ui/pagination-controls";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardTitle } from "@/components/ui/card";
+import { getAssignmentProgressStatus } from "@/lib/assignment/progress-status";
 import { requireAuth } from "@/lib/auth/session";
 import { prisma } from "@/lib/db/prisma";
 import { cn } from "@/lib/utils/cn";
@@ -83,6 +84,16 @@ export default async function SpeakingAssignmentsPage({
         select: {
           speakingUnits: true
         }
+      },
+      speakingUnits: {
+        select: {
+          reviewScore: true,
+          recordings: {
+            where: { kind: "STUDENT" },
+            take: 1,
+            select: { id: true }
+          }
+        }
       }
     }
   });
@@ -130,37 +141,55 @@ export default async function SpeakingAssignmentsPage({
           />
         ) : (
           <div className="grid gap-4">
-            {assignments.map((assignment) => (
-              <Card key={assignment.id}>
-                <div className="flex flex-col gap-4 p-5 md:flex-row md:items-center md:justify-between">
-                  <div className="min-w-0 space-y-2">
-                    <div className="flex flex-wrap items-center gap-3">
-                      <CardTitle className="text-base sm:text-lg">{assignment.title}</CardTitle>
-                      <AssignmentStatusBadge status={assignment.status} aiStatus={assignment.aiStatus} />
+            {assignments.map((assignment) => {
+              const recordedUnits = assignment.speakingUnits.filter((unit) => unit.recordings.length > 0).length;
+              const reviewedUnits = assignment.speakingUnits.filter(
+                (unit) => unit.reviewScore !== null && unit.reviewScore !== undefined
+              ).length;
+              const progressStatus = getAssignmentProgressStatus({
+                totalItems: assignment._count.speakingUnits,
+                startedItems: recordedUnits,
+                completedItems: recordedUnits,
+                reviewedItems: reviewedUnits
+              });
+
+              return (
+                <Card key={assignment.id}>
+                  <div className="flex flex-col gap-4 p-5 md:flex-row md:items-center md:justify-between">
+                    <div className="min-w-0 space-y-2">
+                      <div className="flex flex-wrap items-center gap-3">
+                        <CardTitle className="text-base sm:text-lg">{assignment.title}</CardTitle>
+                        <AssignmentStatusBadge
+                          status={assignment.status}
+                          aiStatus={assignment.aiStatus}
+                          progressStatus={progressStatus}
+                        />
+                      </div>
+                      <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
+                        <span>{formatDateTime(assignment.createdAt)}</span>
+                        <span>{assignment.originalFileName}</span>
+                        <span>{assignment._count.speakingUnits} 句</span>
+                        <span>已录音 {recordedUnits}</span>
+                        <span>综合分 {formatScore(assignment.overallScore)}</span>
+                      </div>
                     </div>
-                    <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
-                      <span>{formatDateTime(assignment.createdAt)}</span>
-                      <span>{assignment.originalFileName}</span>
-                      <span>{assignment._count.speakingUnits} 句</span>
-                      <span>综合分 {formatScore(assignment.overallScore)}</span>
+                    <div className="flex shrink-0 flex-wrap items-center gap-2 md:self-center">
+                      <Link
+                        href={`/assignments/speaking/${assignment.id}`}
+                        className={buttonVariants({ variant: "outline", size: "sm" })}
+                      >
+                        查看
+                      </Link>
+                      <DeleteButton
+                        endpoint={`/api/assignments/speaking/${assignment.id}`}
+                        size="sm"
+                        className="px-3"
+                      />
                     </div>
                   </div>
-                  <div className="flex shrink-0 flex-wrap items-center gap-2 md:self-center">
-                    <Link
-                      href={`/assignments/speaking/${assignment.id}`}
-                      className={buttonVariants({ variant: "outline", size: "sm" })}
-                    >
-                      查看
-                    </Link>
-                    <DeleteButton
-                      endpoint={`/api/assignments/speaking/${assignment.id}`}
-                      size="sm"
-                      className="px-3"
-                    />
-                  </div>
-                </div>
-              </Card>
-            ))}
+                </Card>
+              );
+            })}
             <PaginationControls
               buildHref={(page) => buildSpeakingHref(activeFilter, page)}
               page={pagination.page}

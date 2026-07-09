@@ -1,5 +1,13 @@
 import type { Recording, SpeakingFeedback, SpeakingUnit } from "@prisma/client";
 
+import {
+  getAssignmentProgressStatus,
+  getItemProgressStatus,
+  type AssignmentProgressStatus,
+  type CompletionStatus,
+  type ItemProgressStatus
+} from "@/lib/assignment/progress-status";
+
 export type SpeakingUnitWithRelations = SpeakingUnit & {
   recordings: Array<
     Recording & {
@@ -20,6 +28,8 @@ export type SpeakingReviewItem = {
     | null;
   recordingsCount: number;
   isReviewed: boolean;
+  completionStatus: CompletionStatus;
+  progressStatus: ItemProgressStatus;
   overallScore: number | null;
   reviewLevel: SpeakingUnit["reviewLevel"];
 };
@@ -28,18 +38,22 @@ export type SpeakingReviewGroup = {
   label: string;
   key: string;
   totalUnits: number;
+  startedUnits: number;
   recordedUnits: number;
   reviewedUnits: number;
   averageOverallScore: number | null;
+  progressStatus: AssignmentProgressStatus;
   units: SpeakingReviewItem[];
 };
 
 export type SpeakingReviewStats = {
   totalUnits: number;
+  startedUnits: number;
   recordedUnits: number;
   reviewedUnits: number;
   pendingUnits: number;
   averageOverallScore: number | null;
+  progressStatus: AssignmentProgressStatus;
 };
 
 function averageScore(values: number[]) {
@@ -76,6 +90,10 @@ function getLatestRecording(unit: SpeakingUnitWithRelations) {
   return [...studentRecordings].sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt))[0] ?? null;
 }
 
+export function getSpeakingUnitCompletionStatus(recordingsCount: number): CompletionStatus {
+  return recordingsCount > 0 ? "COMPLETED" : "NOT_STARTED";
+}
+
 export function buildSpeakingReviewGroups(units: SpeakingUnitWithRelations[]): {
   groups: SpeakingReviewGroup[];
   stats: SpeakingReviewStats;
@@ -84,6 +102,7 @@ export function buildSpeakingReviewGroups(units: SpeakingUnitWithRelations[]): {
     const latestRecording = getLatestRecording(unit);
     const overallScore = unit.reviewScore;
     const recordingsCount = unit.recordings.filter((recording) => recording.kind === "STUDENT").length;
+    const completionStatus = getSpeakingUnitCompletionStatus(recordingsCount);
 
     return {
       id: unit.id,
@@ -93,6 +112,11 @@ export function buildSpeakingReviewGroups(units: SpeakingUnitWithRelations[]): {
       latestRecording,
       recordingsCount,
       isReviewed: overallScore !== null,
+      completionStatus,
+      progressStatus: getItemProgressStatus({
+        completionStatus,
+        isReviewed: overallScore !== null
+      }),
       overallScore,
       reviewLevel: unit.reviewLevel
     };
@@ -110,6 +134,7 @@ export function buildSpeakingReviewGroups(units: SpeakingUnitWithRelations[]): {
   const groups: SpeakingReviewGroup[] = [...groupedMap.entries()]
     .map(([key, items]) => {
       const recordedUnits = items.filter((item) => item.recordingsCount > 0).length;
+      const startedUnits = items.filter((item) => item.completionStatus !== "NOT_STARTED").length;
       const reviewedUnits = items.filter((item) => item.isReviewed).length;
       const scores = items.flatMap((item) => (item.overallScore === null ? [] : [item.overallScore]));
 
@@ -117,15 +142,23 @@ export function buildSpeakingReviewGroups(units: SpeakingUnitWithRelations[]): {
         key,
         label: unitTypeLabel(items[0]?.unitType ?? "SENTENCE"),
         totalUnits: items.length,
+        startedUnits,
         recordedUnits,
         reviewedUnits,
         averageOverallScore: averageScore(scores),
+        progressStatus: getAssignmentProgressStatus({
+          totalItems: items.length,
+          startedItems: startedUnits,
+          completedItems: recordedUnits,
+          reviewedItems: reviewedUnits
+        }),
         units: items.sort((a, b) => a.orderIndex - b.orderIndex)
       };
     })
     .sort((a, b) => a.units[0].orderIndex - b.units[0].orderIndex);
 
   const recordedUnits = mappedUnits.filter((item) => item.recordingsCount > 0).length;
+  const startedUnits = mappedUnits.filter((item) => item.completionStatus !== "NOT_STARTED").length;
   const reviewedUnits = mappedUnits.filter((item) => item.isReviewed).length;
   const scores = mappedUnits.flatMap((item) => (item.overallScore === null ? [] : [item.overallScore]));
 
@@ -133,10 +166,17 @@ export function buildSpeakingReviewGroups(units: SpeakingUnitWithRelations[]): {
     groups,
     stats: {
       totalUnits: mappedUnits.length,
+      startedUnits,
       recordedUnits,
       reviewedUnits,
       pendingUnits: Math.max(0, mappedUnits.length - reviewedUnits),
-      averageOverallScore: averageScore(scores)
+      averageOverallScore: averageScore(scores),
+      progressStatus: getAssignmentProgressStatus({
+        totalItems: mappedUnits.length,
+        startedItems: startedUnits,
+        completedItems: recordedUnits,
+        reviewedItems: reviewedUnits
+      })
     }
   };
 }

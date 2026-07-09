@@ -68,7 +68,11 @@ export default async function SpeakingAssignmentDetailPage({
     >
       <PageShell>
         <div className="flex flex-wrap items-center gap-3">
-          <AssignmentStatusBadge status={assignment.status} aiStatus={assignment.aiStatus} />
+          <AssignmentStatusBadge
+            status={assignment.status}
+            aiStatus={assignment.aiStatus}
+            progressStatus={stats.progressStatus}
+          />
           <Badge variant="outline">总句数 {stats.totalUnits}</Badge>
           <Badge variant="outline">已录音句子 {stats.recordedUnits}</Badge>
           <Badge variant="outline">已批阅 {stats.reviewedUnits}</Badge>

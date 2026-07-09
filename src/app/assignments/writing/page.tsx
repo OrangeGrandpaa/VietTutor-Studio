@@ -11,6 +11,8 @@ import { DeleteButton } from "@/components/ui/delete-button";
 import { PaginationControls } from "@/components/ui/pagination-controls";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardTitle } from "@/components/ui/card";
+import { getAssignmentProgressStatus } from "@/lib/assignment/progress-status";
+import { getWritingQuestionCompletionStatus } from "@/lib/assignment/writing";
 import { requireAuth } from "@/lib/auth/session";
 import { prisma } from "@/lib/db/prisma";
 import { cn } from "@/lib/utils/cn";
@@ -83,6 +85,17 @@ export default async function WritingAssignmentsPage({
         select: {
           sections: true
         }
+      },
+      sections: {
+        select: {
+          originalText: true,
+          vietnameseText: true,
+          feedbacks: {
+            orderBy: { updatedAt: "desc" },
+            take: 1,
+            select: { score: true }
+          }
+        }
       }
     }
   });
@@ -130,37 +143,63 @@ export default async function WritingAssignmentsPage({
           />
         ) : (
           <div className="grid gap-4">
-            {assignments.map((assignment) => (
-              <Card key={assignment.id}>
-                <div className="flex flex-col gap-4 p-5 md:flex-row md:items-center md:justify-between">
-                  <div className="min-w-0 space-y-2">
-                    <div className="flex flex-wrap items-center gap-3">
-                      <CardTitle className="text-base sm:text-lg">{assignment.title}</CardTitle>
-                      <AssignmentStatusBadge status={assignment.status} aiStatus={assignment.aiStatus} />
+            {assignments.map((assignment) => {
+              const questionCompletionStatuses = assignment.sections.map((section) =>
+                getWritingQuestionCompletionStatus(section.originalText, section.vietnameseText)
+              );
+              const startedQuestions = questionCompletionStatuses.filter(
+                (status) => status !== "NOT_STARTED"
+              ).length;
+              const completedQuestions = questionCompletionStatuses.filter(
+                (status) => status === "COMPLETED"
+              ).length;
+              const reviewedQuestions = assignment.sections.filter(
+                (section) => section.feedbacks[0]?.score !== null && section.feedbacks[0]?.score !== undefined
+              ).length;
+              const progressStatus = getAssignmentProgressStatus({
+                totalItems: assignment._count.sections,
+                startedItems: startedQuestions,
+                completedItems: completedQuestions,
+                reviewedItems: reviewedQuestions
+              });
+
+              return (
+                <Card key={assignment.id}>
+                  <div className="flex flex-col gap-4 p-5 md:flex-row md:items-center md:justify-between">
+                    <div className="min-w-0 space-y-2">
+                      <div className="flex flex-wrap items-center gap-3">
+                        <CardTitle className="text-base sm:text-lg">{assignment.title}</CardTitle>
+                        <AssignmentStatusBadge
+                          status={assignment.status}
+                          aiStatus={assignment.aiStatus}
+                          progressStatus={progressStatus}
+                        />
+                      </div>
+                      <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
+                        <span>{formatDateTime(assignment.createdAt)}</span>
+                        <span>{assignment.originalFileName}</span>
+                        <span>{assignment._count.sections} 题</span>
+                        <span>已作答 {completedQuestions}</span>
+                        <span>准确率 {formatPercent(assignment.accuracyScore)}</span>
+                      </div>
                     </div>
-                    <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
-                      <span>{formatDateTime(assignment.createdAt)}</span>
-                      <span>{assignment.originalFileName}</span>
-                      <span>{assignment._count.sections} 题</span>
-                      <span>准确率 {formatPercent(assignment.accuracyScore)}</span>
+                    <div className="flex shrink-0 flex-wrap items-center gap-2 md:self-center">
+                      <Link
+                        href={`/assignments/writing/${assignment.id}`}
+                        className={buttonVariants({ variant: "outline", size: "sm" })}
+                      >
+                        查看
+                      </Link>
+                      <DeleteButton
+                        endpoint={`/api/assignments/writing/${assignment.id}`}
+                        size="sm"
+                        className="px-3"
+                      />
                     </div>
                   </div>
-                  <div className="flex shrink-0 flex-wrap items-center gap-2 md:self-center">
-                    <Link
-                      href={`/assignments/writing/${assignment.id}`}
-                      className={buttonVariants({ variant: "outline", size: "sm" })}
-                    >
-                      查看
-                    </Link>
-                    <DeleteButton
-                      endpoint={`/api/assignments/writing/${assignment.id}`}
-                      size="sm"
-                      className="px-3"
-                    />
-                  </div>
-                </div>
-              </Card>
-            ))}
+                </Card>
+              );
+            })}
             <PaginationControls
               buildHref={(page) => buildWritingHref(activeFilter, page)}
               page={pagination.page}

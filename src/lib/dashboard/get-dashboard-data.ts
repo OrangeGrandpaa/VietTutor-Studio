@@ -1,5 +1,7 @@
 import { AssignmentStatus, AssignmentType, MaterialFileType } from "@prisma/client";
 
+import { getAssignmentProgressStatus } from "@/lib/assignment/progress-status";
+import { getWritingQuestionCompletionStatus } from "@/lib/assignment/writing";
 import { prisma } from "@/lib/db/prisma";
 
 function roundMetric(value: number | null | undefined) {
@@ -99,7 +101,18 @@ export async function getDashboardData() {
         aiStatus: true,
         accuracyScore: true,
         overallScore: true,
-        createdAt: true
+        createdAt: true,
+        sections: {
+          select: {
+            originalText: true,
+            vietnameseText: true,
+            feedbacks: {
+              orderBy: { updatedAt: "desc" },
+              take: 1,
+              select: { score: true }
+            }
+          }
+        }
       }
     }),
     prisma.assignment.findMany({
@@ -114,7 +127,17 @@ export async function getDashboardData() {
         aiStatus: true,
         accuracyScore: true,
         overallScore: true,
-        createdAt: true
+        createdAt: true,
+        speakingUnits: {
+          select: {
+            reviewScore: true,
+            recordings: {
+              where: { kind: "STUDENT" },
+              take: 1,
+              select: { id: true }
+            }
+          }
+        }
       }
     }),
     prisma.assignment.findMany({
@@ -171,6 +194,44 @@ export async function getDashboardData() {
     ...assignmentActivityDates.map((item) => item.createdAt.toISOString().slice(0, 10)),
     ...materialActivityDates.map((item) => item.createdAt.toISOString().slice(0, 10))
   ];
+  const recentWritingWithProgress = recentWriting.map((assignment) => {
+    const questionCompletionStatuses = assignment.sections.map((section) =>
+      getWritingQuestionCompletionStatus(section.originalText, section.vietnameseText)
+    );
+    const startedQuestions = questionCompletionStatuses.filter((status) => status !== "NOT_STARTED").length;
+    const completedQuestions = questionCompletionStatuses.filter((status) => status === "COMPLETED").length;
+    const reviewedQuestions = assignment.sections.filter(
+      (section) => section.feedbacks[0]?.score !== null && section.feedbacks[0]?.score !== undefined
+    ).length;
+    const { sections, ...item } = assignment;
+
+    return {
+      ...item,
+      progressStatus: getAssignmentProgressStatus({
+        totalItems: sections.length,
+        startedItems: startedQuestions,
+        completedItems: completedQuestions,
+        reviewedItems: reviewedQuestions
+      })
+    };
+  });
+  const recentSpeakingWithProgress = recentSpeaking.map((assignment) => {
+    const recordedUnits = assignment.speakingUnits.filter((unit) => unit.recordings.length > 0).length;
+    const reviewedUnits = assignment.speakingUnits.filter(
+      (unit) => unit.reviewScore !== null && unit.reviewScore !== undefined
+    ).length;
+    const { speakingUnits, ...item } = assignment;
+
+    return {
+      ...item,
+      progressStatus: getAssignmentProgressStatus({
+        totalItems: speakingUnits.length,
+        startedItems: recordedUnits,
+        completedItems: recordedUnits,
+        reviewedItems: reviewedUnits
+      })
+    };
+  });
 
   return {
     overview: {
@@ -183,8 +244,8 @@ export async function getDashboardData() {
       writingAverage: roundMetric(writingAccuracy._avg.accuracyScore),
       speakingAverage: average(speakingScores)
     },
-    recentWriting,
-    recentSpeaking,
+    recentWriting: recentWritingWithProgress,
+    recentSpeaking: recentSpeakingWithProgress,
     trend,
     materials: {
       total: totalMaterials,

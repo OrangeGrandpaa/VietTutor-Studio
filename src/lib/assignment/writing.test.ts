@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { buildWritingReviewGroups, normalizeWritingStructure } from "@/lib/assignment/writing";
+import {
+  buildWritingReviewGroups,
+  getWritingQuestionCompletionStatus,
+  normalizeWritingStructure
+} from "@/lib/assignment/writing";
 
 describe("writing helpers", () => {
   it("normalizes structure using only active fields", () => {
@@ -151,5 +155,13 @@ describe("writing helpers", () => {
       firstQuestionId: "section-1",
       totalQuestions: 4
     });
+  });
+
+  it("detects incomplete multi-blank writing answers", () => {
+    const prompt = "Anh ấy __________ tôi và tôi __________ anh ấy.";
+
+    expect(getWritingQuestionCompletionStatus(prompt, null)).toBe("NOT_STARTED");
+    expect(getWritingQuestionCompletionStatus(prompt, JSON.stringify(["cao hơn", ""]))).toBe("IN_PROGRESS");
+    expect(getWritingQuestionCompletionStatus(prompt, JSON.stringify(["cao hơn", "giống"]))).toBe("COMPLETED");
   });
 });

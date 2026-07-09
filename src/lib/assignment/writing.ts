@@ -1,5 +1,12 @@
 import type { AiProcessStatus, AssignmentSection, TeacherFeedback } from "@prisma/client";
 
+import {
+  getAssignmentProgressStatus,
+  getItemProgressStatus,
+  type AssignmentProgressStatus,
+  type CompletionStatus,
+  type ItemProgressStatus
+} from "@/lib/assignment/progress-status";
 import { repairTextMojibake } from "@/lib/assignment/text-encoding";
 import type { WritingPart, WritingStructuredContent } from "@/types/assignment";
 
@@ -20,6 +27,8 @@ export type WritingQuestionReviewItem = {
   detectedLevel: string | null;
   feedbackId: string | null;
   isCorrect: boolean | null;
+  completionStatus: CompletionStatus;
+  progressStatus: ItemProgressStatus;
   note: string;
 };
 
@@ -29,8 +38,11 @@ export type WritingPartReviewGroup = {
   instruction: string;
   totalQuestions: number;
   reviewedQuestions: number;
+  startedQuestions: number;
+  completedQuestions: number;
   correctQuestions: number;
   accuracy: number | null;
+  progressStatus: AssignmentProgressStatus;
   exerciseGroups: WritingExerciseReviewGroup[];
   questions: WritingQuestionReviewItem[];
 };
@@ -42,16 +54,22 @@ export type WritingExerciseReviewGroup = {
   firstQuestionId: string;
   totalQuestions: number;
   reviewedQuestions: number;
+  startedQuestions: number;
+  completedQuestions: number;
   correctQuestions: number;
   accuracy: number | null;
+  progressStatus: AssignmentProgressStatus;
 };
 
 export type WritingReviewStats = {
   totalQuestions: number;
   reviewedQuestions: number;
+  startedQuestions: number;
+  completedQuestions: number;
   correctQuestions: number;
   accuracy: number | null;
   pendingQuestions: number;
+  progressStatus: AssignmentProgressStatus;
 };
 
 function normalizeText(value: unknown) {
@@ -64,6 +82,53 @@ function normalizeQuestionText(value: unknown) {
     .map((line) => line.trimEnd())
     .filter((line) => line.trim().length > 0)
     .join("\n");
+}
+
+function getBlankCount(prompt: string) {
+  return prompt.match(/_{3,}/g)?.length ?? 0;
+}
+
+function parseAnswerValues(answer: string | null | undefined, blankCount: number) {
+  const normalized = normalizeText(answer);
+
+  if (!normalized) {
+    return [];
+  }
+
+  if (blankCount <= 1) {
+    return [normalized];
+  }
+
+  try {
+    const parsed = JSON.parse(normalized) as unknown;
+
+    if (Array.isArray(parsed)) {
+      return Array.from({ length: blankCount }, (_, index) =>
+        typeof parsed[index] === "string" ? parsed[index].trim() : ""
+      );
+    }
+  } catch {}
+
+  return [normalized];
+}
+
+export function getWritingQuestionCompletionStatus(
+  prompt: string,
+  answer: string | null | undefined
+): CompletionStatus {
+  const blankCount = getBlankCount(prompt);
+  const values = parseAnswerValues(answer, blankCount);
+  const filledCount = values.filter((value) => value.trim().length > 0).length;
+
+  if (filledCount === 0) {
+    return "NOT_STARTED";
+  }
+
+  if (blankCount > 1 && filledCount < blankCount) {
+    return "IN_PROGRESS";
+  }
+
+  return "COMPLETED";
 }
 
 function normalizeDisplayType(value: unknown) {
@@ -127,6 +192,8 @@ function buildExerciseGroups(
 
   return [...groups.entries()].map(([title, items], index) => {
     const reviewedQuestions = items.filter((item) => item.isCorrect !== null).length;
+    const startedQuestions = items.filter((item) => item.completionStatus !== "NOT_STARTED").length;
+    const completedQuestions = items.filter((item) => item.completionStatus === "COMPLETED").length;
     const correctQuestions = items.filter((item) => item.isCorrect === true).length;
 
     return {
@@ -136,8 +203,16 @@ function buildExerciseGroups(
       firstQuestionId: items[0].id,
       totalQuestions: items.length,
       reviewedQuestions,
+      startedQuestions,
+      completedQuestions,
       correctQuestions,
-      accuracy: toAccuracy(correctQuestions, reviewedQuestions)
+      accuracy: toAccuracy(correctQuestions, reviewedQuestions),
+      progressStatus: getAssignmentProgressStatus({
+        totalItems: items.length,
+        startedItems: startedQuestions,
+        completedItems: completedQuestions,
+        reviewedItems: reviewedQuestions
+      })
     };
   });
 }
@@ -267,6 +342,9 @@ export function buildWritingReviewGroups(
     const question = flattened[index];
     const feedback = extractLatestFeedback(section.feedbacks);
     const score = feedback?.score ?? null;
+    const prompt = question?.prompt || section.originalText;
+    const answer = section.vietnameseText ?? question?.answer ?? null;
+    const completionStatus = getWritingQuestionCompletionStatus(prompt, answer);
 
     return {
       id: section.id,
@@ -275,12 +353,17 @@ export function buildWritingReviewGroups(
       partTitle: question?.partTitle ?? "题目列表",
       partIndex: question?.partIndex ?? 0,
       sectionTitle: section.sectionTitle,
-      prompt: question?.prompt || section.originalText,
-      answer: section.vietnameseText ?? question?.answer ?? null,
+      prompt,
+      answer,
       displayType: question?.displayType ?? "paragraph",
       detectedLevel: question?.detectedLevel ?? section.detectedLevel ?? null,
       feedbackId: feedback?.id ?? null,
       isCorrect: score === null ? null : score >= 100,
+      completionStatus,
+      progressStatus: getItemProgressStatus({
+        completionStatus,
+        isReviewed: score !== null
+      }),
       note: feedback?.explanation ?? ""
     } satisfies WritingQuestionReviewItem;
   });
@@ -288,6 +371,8 @@ export function buildWritingReviewGroups(
   const groups = structured.parts.map((part, partIndex) => {
     const questions = questionItems.filter((item) => item.partIndex === partIndex);
     const reviewedQuestions = questions.filter((item) => item.isCorrect !== null).length;
+    const startedQuestions = questions.filter((item) => item.completionStatus !== "NOT_STARTED").length;
+    const completedQuestions = questions.filter((item) => item.completionStatus === "COMPLETED").length;
     const correctQuestions = questions.filter((item) => item.isCorrect === true).length;
 
     return {
@@ -296,8 +381,16 @@ export function buildWritingReviewGroups(
       instruction: part.instruction,
       totalQuestions: questions.length,
       reviewedQuestions,
+      startedQuestions,
+      completedQuestions,
       correctQuestions,
       accuracy: toAccuracy(correctQuestions, reviewedQuestions),
+      progressStatus: getAssignmentProgressStatus({
+        totalItems: questions.length,
+        startedItems: startedQuestions,
+        completedItems: completedQuestions,
+        reviewedItems: reviewedQuestions
+      }),
       exerciseGroups: buildExerciseGroups(part, partIndex, questions),
       questions
     } satisfies WritingPartReviewGroup;
@@ -305,6 +398,8 @@ export function buildWritingReviewGroups(
 
   if (!groups.length) {
     const reviewedQuestions = questionItems.filter((item) => item.isCorrect !== null).length;
+    const startedQuestions = questionItems.filter((item) => item.completionStatus !== "NOT_STARTED").length;
+    const completedQuestions = questionItems.filter((item) => item.completionStatus === "COMPLETED").length;
     const correctQuestions = questionItems.filter((item) => item.isCorrect === true).length;
 
     groups.push({
@@ -313,14 +408,24 @@ export function buildWritingReviewGroups(
       instruction: "",
       totalQuestions: questionItems.length,
       reviewedQuestions,
+      startedQuestions,
+      completedQuestions,
       correctQuestions,
       accuracy: toAccuracy(correctQuestions, reviewedQuestions),
+      progressStatus: getAssignmentProgressStatus({
+        totalItems: questionItems.length,
+        startedItems: startedQuestions,
+        completedItems: completedQuestions,
+        reviewedItems: reviewedQuestions
+      }),
       exerciseGroups: [],
       questions: questionItems
     });
   }
 
   const reviewedQuestions = questionItems.filter((item) => item.isCorrect !== null).length;
+  const startedQuestions = questionItems.filter((item) => item.completionStatus !== "NOT_STARTED").length;
+  const completedQuestions = questionItems.filter((item) => item.completionStatus === "COMPLETED").length;
   const correctQuestions = questionItems.filter((item) => item.isCorrect === true).length;
 
   return {
@@ -328,9 +433,17 @@ export function buildWritingReviewGroups(
     stats: {
       totalQuestions: questionItems.length,
       reviewedQuestions,
+      startedQuestions,
+      completedQuestions,
       correctQuestions,
       accuracy: toAccuracy(correctQuestions, reviewedQuestions),
-      pendingQuestions: Math.max(0, questionItems.length - reviewedQuestions)
+      pendingQuestions: Math.max(0, questionItems.length - reviewedQuestions),
+      progressStatus: getAssignmentProgressStatus({
+        totalItems: questionItems.length,
+        startedItems: startedQuestions,
+        completedItems: completedQuestions,
+        reviewedItems: reviewedQuestions
+      })
     }
   };
 }

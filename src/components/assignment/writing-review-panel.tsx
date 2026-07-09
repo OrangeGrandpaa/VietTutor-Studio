@@ -12,6 +12,7 @@ import type {
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
+import { progressStatusLabel } from "@/lib/assignment/progress-status";
 import { cn } from "@/lib/utils/cn";
 import { formatPercent } from "@/lib/utils/format";
 
@@ -60,8 +61,10 @@ function getReviewNavigationItems(groups: WritingPartReviewGroup[]) {
       title: group.title,
       href: `#${getWritingQuestionAnchor(group.firstQuestionId)}`,
       reviewedQuestions: group.reviewedQuestions,
+      completedQuestions: group.completedQuestions,
       totalQuestions: group.totalQuestions,
       accuracy: group.accuracy,
+      progressStatus: group.progressStatus,
       className: getExerciseStatus(group).className
     }));
   }
@@ -71,8 +74,10 @@ function getReviewNavigationItems(groups: WritingPartReviewGroup[]) {
     title: group.partTitle,
     href: `#${getWritingPartAnchor(group.partIndex)}`,
     reviewedQuestions: group.reviewedQuestions,
+    completedQuestions: group.completedQuestions,
     totalQuestions: group.totalQuestions,
     accuracy: group.accuracy,
+    progressStatus: group.progressStatus,
     className: getGroupStatus(group).className
   }));
 }
@@ -130,10 +135,11 @@ export function WritingReviewPanel({
                     <div>
                       <p className="font-medium">{group.title}</p>
                       <p className="text-sm text-muted-foreground">
-                        {group.reviewedQuestions}/{group.totalQuestions} 题已批阅
+                        已作答 {group.completedQuestions}/{group.totalQuestions}，已批阅 {group.reviewedQuestions}
                       </p>
                     </div>
                     <div className="flex flex-col items-end gap-2">
+                      <Badge variant="outline">{progressStatusLabel(group.progressStatus)}</Badge>
                       <Badge variant="outline">{formatPercent(group.accuracy)}</Badge>
                     </div>
                   </div>

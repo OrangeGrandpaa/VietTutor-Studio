@@ -2,6 +2,11 @@
 
 ## 2026-07-09
 
+### Changed
+
+- Added derived assignment and per-item progress states across writing and speaking pages: `还没做:3`, `还没做完！`, `未批阅`, `批阅中`, and `已批阅`.
+- Dashboard recent assignments, assignment list cards, detail headers, writing question cards, speaking sentence chips, and review navigation cards now show the richer progress states.
+
 ### Fixed
 
 - Fixed writing assignment text extraction and display for Chinese content that was decoded as Latin-1 mojibake, such as `ÄÑÊÜ` instead of `难受`.

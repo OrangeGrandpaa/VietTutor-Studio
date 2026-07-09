@@ -86,10 +86,15 @@ export default async function WritingAssignmentDetailPage({
       <PageShell>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex flex-wrap items-center gap-3">
-            <AssignmentStatusBadge status={assignment.status} aiStatus={assignment.aiStatus} />
+            <AssignmentStatusBadge
+              status={assignment.status}
+              aiStatus={assignment.aiStatus}
+              progressStatus={stats.progressStatus}
+            />
             {shouldShowQuestions ? (
               <>
                 <Badge variant="outline">总题数 {stats.totalQuestions}</Badge>
+                <Badge variant="outline">已作答 {stats.completedQuestions}</Badge>
                 <Badge variant="outline">已批阅 {stats.reviewedQuestions}</Badge>
                 <Badge variant="outline">整体准确率 {formatPercent(stats.accuracy)}</Badge>
                 <Badge variant="outline">错题 {wrongQuestionCount}</Badge>
