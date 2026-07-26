@@ -1,274 +1,112 @@
-# Production Status
+# VietTutor Studio 生产状态
 
-Last updated: 2026-06-13
+最近核验：`2026-07-27 02:02 CST (UTC+8)`
 
-This file records the current real-world production state for VietTutor Studio. Use it with:
+核验范围：本次仅从公网检查 HTTPS、重定向和健康接口；未登录 ECS，因此线上 commit、Node 版本、systemd 用户、备份和磁盘状态仍需 SSH 复核。未核验内容不得当作已确认事实。
 
-- `CHANGELOG.md`: version-by-version project changes.
-- `DEPLOY_ALIYUN.md`: repeatable Alibaba Cloud deployment procedure.
-- `PRODUCTION_STATUS.md`: current server facts, operational notes, and known pitfalls.
+## 当前公开状态
 
-## Current Production URLs
+| 项目 | 当前值 | 证据/核验方式 |
+| --- | --- | --- |
+| 主域名 | `https://vietkiet.cn` | 公网 HTTPS 请求 |
+| www 域名 | `https://www.vietkiet.cn` | 公网 HTTPS 请求 |
+| 未登录首页 | 两个域名均返回 `307` 到各自 `/login` | `curl` |
+| 健康接口 | `200`，`status=ok`，`checks.database=ok` | `https://vietkiet.cn/api/health` |
+| HTTPS 证书 | 新证书已部署，两个域名均通过公网验证 | `openssl s_client` |
 
-- `https://vietkiet.cn`
-- `https://www.vietkiet.cn`
+公网验证命令：
 
-Expected behavior:
+```bash
+curl -I https://vietkiet.cn
+curl -I https://www.vietkiet.cn
+curl --fail https://vietkiet.cn/api/health
+```
 
-- HTTPS is enabled for both domains.
-- Unauthenticated page requests redirect to `/login`.
-- `https://vietkiet.cn/api/health` should return HTTP `200`.
+## 当前证书事实
 
-## Server Snapshot
+| 字段 | 当前值 |
+| --- | --- |
+| Subject | `CN=vietkiet.cn` |
+| Issuer | `DigiCert Encryption Everywhere DV TLS CA - G2` |
+| SAN | `vietkiet.cn`、`www.vietkiet.cn` |
+| 生效时间 | `2026-07-26 08:00:00 CST` |
+| 到期时间 | `2026-10-24 07:59:59 CST`（`2026-10-23 23:59:59 UTC`） |
+| SHA-256 指纹 | `91:FB:37:CB:17:BD:74:44:67:B9:5E:CC:76:CB:6E:2B:7F:68:7A:15:CE:2A:7E:44:0C:D5:B4:B8:13:04:4E:98` |
+| 公网核验时间 | `2026-07-27 02:02 CST` |
 
-- Provider: Alibaba Cloud ECS.
-- OS: Alibaba Cloud Linux 3.
-- App directory: `/var/www/VietTutor-Studio`.
-- Runtime: Next.js 15 on Node.js.
-- Process manager: `systemd`.
-- Active service: `vietutor-studio`.
-- App port: `3000`.
-- Reverse proxy: Nginx.
-- Active Nginx config: `/etc/nginx/conf.d/viettutor.conf`.
+本轮证书已完成签发、Nginx 替换和两域名外部验证。两个 SNI 均返回上述新指纹，SAN 完整覆盖根域名与 `www`，健康接口同时验证通过。服务器内证书备份路径和暂存私钥清理状态仍需在下一次 SSH 核验中记录。完整换发、回滚、旧证书处理和监控步骤见 `DEPLOY_ALIYUN.md#10-生产数字证书续签换发`。
 
-Production does not use PM2. PM2 was attempted earlier, but the final stable setup uses `systemd`.
+## 服务器待复核项
 
-## Repository State
+以下值来自历史部署记录，不是本次 SSH 核验结果：
 
-Latest repository state documented by this status file:
+| 项目 | 历史记录 | 本次状态 |
+| --- | --- | --- |
+| 云服务/系统 | Alibaba Cloud ECS / Alibaba Cloud Linux 3 | 待 SSH 复核 |
+| 应用目录 | `/var/www/VietTutor-Studio` | 待 SSH 复核 |
+| 应用端口 | `3000` | 公网链路间接可用，进程监听待复核 |
+| 服务名 | `vietutor-studio` | 待 SSH 复核 |
+| 反向代理 | Nginx | TLS 响应可见，配置文件待复核 |
+| Nginx 配置 | `/etc/nginx/conf.d/viettutor.conf` | 待 SSH 复核 |
+| SQLite | `/var/www/VietTutor-Studio/prisma/dev.db` | 健康接口显示数据库可用，路径/完整性待复核 |
+| 上传目录 | `/var/www/VietTutor-Studio/uploads` | 待 SSH 复核 |
+| 生产 commit | 未知 | 必须执行 `git rev-parse --short HEAD` |
+| Node 版本 | 未知 | 必须执行 `node -v`；目标为 Node 24 LTS |
+| systemd 运行用户 | 未知 | 必须确认迁移为 `vietutor`，不能是 root |
+| 最近可恢复备份 | 未知 | 必须记录时间、位置、校验和及恢复演练日期 |
 
-- Course materials no longer store learning progress, learning status, page counts, or notes; material detail pages only show metadata, download, and preview.
-- Assignment and material list pages are paginated, dashboard metrics use database aggregates, and protected file responses support streaming with HTTP `Range` plus optional Nginx `X-Accel-Redirect`.
-- Writing uploads accept only TXT, Word, Markdown, and RTF files, with local text extraction before Kimi structuring.
-- Writing detail page inline-blank answer inputs and Chinese structuring-name normalization are included in the documented behavior.
-- Writing and speaking detail pages replace the global settings button with an assignment title editor.
-- Speaking assignments accept TXT and RTF, split sentences locally without Kimi, support filtered list views, full-text recordings, per-sentence student recordings, teacher pronunciation recordings, and 10/5/0 pronunciation judgments.
-
-Do not assume the server is on this exact commit without checking it directly:
+SSH 复核命令：
 
 ```bash
 cd /var/www/VietTutor-Studio
 git rev-parse --short HEAD
-git log --oneline -n 3
-```
-
-## Data And Storage
-
-- Database: SQLite.
-- SQLite file: `/var/www/VietTutor-Studio/prisma/dev.db`.
-- Upload directory: `/var/www/VietTutor-Studio/uploads`.
-- Environment file: `/var/www/VietTutor-Studio/.env`.
-- Protected upload acceleration prefix: `PROTECTED_FILE_ACCEL_REDIRECT_PREFIX="/_protected_uploads/"` when the matching internal Nginx location is enabled.
-
-Back up `prisma/dev.db` and `uploads` before risky deployments or schema changes.
-
-## Current Application Behavior
-
-Writing assignment list page:
-
-- The list has filters for `全部`, `已批阅`, and `未批阅`.
-- The list is paginated to keep page render and query time stable as history grows.
-- List cards are compact and place `查看` / `删除` actions beside each assignment record.
-- Assignments with pending AI processing show `AI结构化中`.
-- Writing cards derive visible progress from answers and reviews: `还没做:3`, `还没做完！`, `未批阅`, `批阅中`, or `已批阅`.
-
-Speaking assignment list page:
-
-- The list supports `全部`, `已批阅`, and `未批阅` filters.
-- The list is paginated and loads only card-rendering fields plus minimal unit recording/review markers for progress status.
-- List cards use the same compact structure as writing assignments, with `查看` / `删除` actions beside each record.
-- Speaking cards derive visible progress from student recordings and teacher judgments: `还没做:3`, `还没做完！`, `未批阅`, `批阅中`, or `已批阅`.
-
-Speaking assignment upload:
-
-- Uploads accept `.txt` plain-text and `.rtf` rich-text files.
-- Speaking upload no longer calls Kimi or Kimi Files API.
-- The server reads TXT directly; RTF is converted to plain text before local sentence splitting.
-- DOC/PDF/PPT and other non-TXT/RTF files are rejected before assignment creation.
-
-Speaking assignment detail page:
-
-- The page header includes a title editor in the former settings-button position.
-- The page shows a styled reading-text panel rather than AI-generated unit groups.
-- The reading-text panel title area does not show an extra sentence-count badge.
-- The reading-text panel includes a full-text recording area so a complete long passage can be recorded and played before sentence-level review.
-- Full-text recordings attach to the assignment itself and do not count as any single sentence recording.
-- Each sentence opens the sentence interaction panel for student audio input, teacher pronunciation recording, and pronunciation judgment.
-- The sentence interaction panel stays fully visible on desktop while the page scrolls; long panel content scrolls inside the panel.
-- The teacher pronunciation area does not show extra helper copy above the recording list.
-- Teacher judgment options are `准确`, `一般`, and `叽里咕噜说些什么呢`, scored as 10, 5, and 0 respectively.
-- Sentence labels show the 0-point state as `听不懂`.
-- Sentence chips also show the per-sentence progress state; no student recording is `还没做:3`, a recorded but unjudged sentence is `未批阅`, and a judged sentence is `已批阅` with the pronunciation result kept separately.
-- The assignment overall score is the arithmetic average of reviewed sentence scores.
-- Recording panels support pause, stop, save, retry, and cancel. Retry keeps the current full-text or sentence target active; cancel discards unsaved audio and closes the recording panel.
-
-Writing assignment upload:
-
-- Uploads accept only `.txt`, `.md`, `.markdown`, `.rtf`, `.doc`, and `.docx` files.
-- PDF/PPT/Excel/CSV/HTML/JSON/XML/log and other complex formats are rejected before assignment creation.
-- The server extracts supported writing files locally; Kimi Files API is no longer used for writing file extraction.
-- Text extraction repairs common Chinese encoding issues, including GBK/GB18030 source files and Latin-1 mojibake such as `ÄÑÊÜ`.
-- Uploads should return quickly and enter the assignment detail page.
-- Kimi document structuring runs after upload using the locally extracted text.
-- New writing uploads do not save or display the local fallback/basic split.
-- While structuring is still pending, the detail page shows only a pending notice and a manual refresh button.
-- Automatic polling is intentionally not enabled.
-- If Kimi returns `finish_reason=length`, the writing assignment shows the AI failure reason and can be retried after token/config changes.
-
-Writing assignment detail page:
-
-- The page header includes a title editor in the former settings-button position.
-- Questions, wrong-answer filtering, and the overall review panel are shown only after AI structuring succeeds.
-- Question `______` blanks render as inline answer inputs that start at the blank width and expand with typed content.
-- Questions without `______` blanks show a student-answer textarea so every question can accept an answer.
-- Multiple-choice options `A-D` render as clickable answers and save immediately, including options inside reading-comprehension questions.
-- Reading-comprehension blocks with multiple choice sub-questions save one answer per sub-question, so later selections do not overwrite earlier answers.
-- Answer save controls sit next to the relevant answer input area to reduce vertical space.
-- The old separate student-answer textarea is not shown on fill-in-the-blank questions.
-- Saving inline answers clears existing review feedback for that question so stale feedback is not reused.
-- Review textareas start at one-line height and grow with entered content.
-- The wrong-answer filter is available in the top status area.
-- The right-side overall review panel is narrower than before and scrolls internally when content is long.
-- Overall review cards can jump to the corresponding assignment section; detected exercise headings such as `练习 13：句型转换` create more specific navigation cards that jump to the first question in that exercise.
-- Section state is color-coded: pending/incomplete states are visually distinct from completed states.
-- Writing question cards and overall review navigation cards show derived progress states: `还没做:3`, `还没做完！`, `未批阅`, `批阅中`, or `已批阅`.
-- Redundant cards for question filtering and original upload summary are not shown.
-- AI structuring failures show fuller error details when available, including nested `cause` information.
-- AI structuring removes blank lines inside a single question and keeps assignment/part names in Chinese.
-
-AI configuration:
-
-- `KIMI_MAX_TOKENS` is configurable in the server `.env`.
-- `KIMI_REQUEST_TIMEOUT_MS` and `KIMI_MAX_RETRIES` are configurable in the server `.env` for slow upstream responses or transient Kimi network failures.
-- The user intended to set production to `KIMI_MAX_TOKENS="16384"` after seeing length-limited Kimi responses.
-- `.env` is server-local and is not committed to Git.
-- Kimi configuration currently affects writing assignment structuring only; writing file text extraction is local, and speaking assignments no longer depend on Kimi.
-
-Course materials:
-
-- The list is paginated, type filters use indexed queries, and cards use a compact row layout for title, labels, upload time, and actions on wider screens.
-- Uploads store title, original file name, protected file path, MIME type, file type, and course material category.
-- The material detail page no longer shows learning progress or progress editing cards.
-- The library does not record learning status, current page, total pages, completion percentage, or notes.
-
-Dashboard and files:
-
-- Dashboard totals, averages, and material library counts are calculated with database aggregate queries instead of full-table application-side scans.
-- Dashboard and recent-assignment cards show speaking scores as points, not percentages.
-- Protected assignment, material, and recording files stream from disk and support HTTP `Range`, improving large PDF/video/audio access and reducing memory pressure.
-- Protected file responses include `ETag` and `Last-Modified` so repeat previews can reuse browser cache.
-- When `PROTECTED_FILE_ACCEL_REDIRECT_PREFIX` is configured, `/api/files/[id]` still performs authentication and database lookup, then returns `X-Accel-Redirect` so Nginx sends the actual upload bytes instead of the Next.js process.
-
-## HTTPS Certificate
-
-HTTPS uses manually deployed Alibaba Cloud personal test certificates.
-
-Certificate coverage:
-
-- `vietkiet.cn`
-- `www.vietkiet.cn`
-
-Server paths:
-
-- Certificate: `/etc/nginx/ssl/vietkiet.cn/fullchain.pem`
-- Private key: `/etc/nginx/ssl/vietkiet.cn/privkey.pem`
-
-Certificate replacement procedure:
-
-```bash
-nginx -t
-systemctl reload nginx
-```
-
-The free personal test certificate is short-lived. Replace it before expiry.
-
-## Service Commands
-
-Application service:
-
-```bash
+git status --short
+node -v
+systemctl show vietutor-studio -p User -p Group -p ActiveState -p SubState
 systemctl status vietutor-studio --no-pager
-systemctl restart vietutor-studio
-journalctl -u vietutor-studio -n 100 --no-pager
-```
-
-Nginx:
-
-```bash
 nginx -t
-systemctl reload nginx
-systemctl status nginx --no-pager
+sqlite3 prisma/dev.db 'PRAGMA integrity_check;'
+df -h
 ```
 
-Protected upload acceleration requires this HTTPS server location:
+## 开放行动
 
-```nginx
-location /_protected_uploads/ {
-    internal;
-    alias /var/www/VietTutor-Studio/uploads/;
-    sendfile on;
-    tcp_nopush on;
-}
-```
+| 优先级 | 行动 | 负责人 | 截止时间 | 状态 | 完成证据 |
+| --- | --- | --- | --- | --- | --- |
+| P1 | SSH 核验线上 commit、Node、systemd 用户、Nginx、证书备份和磁盘 | 待指定 | 下一次代码发布窗口 | 待开始 | 上节命令输出摘要 |
+| P1 | 升级生产到 Node 24，并以低权限 `vietutor` 用户运行 | 待指定 | 下一次代码发布 | 待开始 | `node -v`、`systemctl show` |
+| P1 | 部署本轮安全/一致性修复并执行生产 smoke test | 待指定 | 证书完成后最近维护窗口 | 待开始 | commit、发布时间、健康和核心流程结果 |
+| P1 | 建立异地加密备份和恢复演练记录 | 待指定 | `2026-08-07` | 待开始 | 最近备份时间、SHA-256、恢复演练日期 |
+| P2 | 建立证书 30/14/7 天告警 | 待指定 | `2026-07-31` | 待开始 | 告警策略截图或任务记录 |
+| P2 | 将 AI `after()` 改为持久任务队列 | 待指定 | 未排期 | 待评估 | 设计/实现链接 |
 
-Health checks:
+状态只允许：`待开始`、`进行中`、`阻塞中`、`已完成`。标为已完成时必须填写证据；完成项在下一次整理时移入 CHANGELOG，不在此长期堆积。
 
-```bash
-curl -I http://127.0.0.1:3000
-curl -I https://vietkiet.cn/api/health
-curl -I https://www.vietkiet.cn
-```
+## 发布核验记录
 
-## Release Flow
+下一次生产发布后，用本节替换旧值，不要追加无限流水账：
 
-Normal update:
+| 字段 | 值 |
+| --- | --- |
+| 发布 commit | `待填写` |
+| 发布时间 | `待填写（含时区）` |
+| 执行人 | `待填写` |
+| 是否包含 schema 变化 | `是/否` |
+| 发布前备份 | `路径/时间/SHA-256，或不适用` |
+| `npm run check` | `通过/失败` |
+| `npm run build` | `通过/失败` |
+| `npm audit --omit=dev` | `结果` |
+| 本地健康 | `结果` |
+| 公网健康 | `结果` |
+| 登录/写作/口语/课件 smoke test | `结果` |
+| 回滚是否触发 | `否，或回滚原因与结果` |
 
-```bash
-cd /var/www/VietTutor-Studio
-bash scripts/deploy.sh
-```
+## 本文件维护规则
 
-Update with Prisma schema changes:
-
-```bash
-cd /var/www/VietTutor-Studio
-bash scripts/deploy.sh --with-db-push
-```
-
-The 2026-05-25 performance update adds Prisma indexes, the 2026-05-26 course material simplification removes progress-related columns, and the 2026-05-31 speaking assignment update adds assignment-level recordings plus sentence review fields. Deploy these releases with `--with-db-push`.
-
-The script installs dependencies from `package-lock.json`, builds the app, and restarts `vietutor-studio`.
-
-## Known Pitfalls
-
-- PM2 should not be reintroduced unless there is a deliberate migration plan.
-- An old service named `viettutor.service` previously relaunched `npm run start` and caused port `3000` conflicts.
-- `certbot` validation was unreliable in this environment; the stable HTTPS path is manual Alibaba Cloud certificate deployment.
-- Nginx `504 Gateway Time-out` during writing upload usually means the upstream Next.js request exceeded proxy timeout, often because AI structuring was blocking the response.
-- Browser-side `Failed to find Server Action` logs can occur after deployments when an old page submits against a newer build; refreshing the browser usually clears it.
-- Kimi `HeadersTimeoutError` / `UND_ERR_HEADERS_TIMEOUT` means the upstream did not return response headers in time; it is normally not a document-format issue. Tune `KIMI_REQUEST_TIMEOUT_MS` / `KIMI_MAX_RETRIES` and restart `vietutor-studio`.
-- Kimi `.env` changes such as `KIMI_MAX_TOKENS`, `KIMI_REQUEST_TIMEOUT_MS`, or `KIMI_MAX_RETRIES` require restarting `vietutor-studio`.
-- Writing uploads now require TXT, Word, Markdown, or RTF. If a teacher tries to upload PDF/PPT/Excel/CSV/HTML/JSON/XML/log as a writing assignment, the upload should fail by design.
-- Speaking uploads now require TXT or RTF. If a teacher tries to upload DOC/PDF/PPT as a speaking assignment, the upload should fail by design.
-
-## Verification
-
-Local development checks used in this project:
-
-```bash
-npm run test
-npm run build
-```
-
-There are currently no known build warnings that should be ignored during handoff.
-
-## Handoff Checklist
-
-For another agent or engineer taking over:
-
-- Start by reading `CHANGELOG.md`, `DEPLOY_ALIYUN.md`, and this file.
-- Check local Git status before editing because `.env.example` may have uncommitted local environment-example changes.
-- On the server, verify the active commit before assuming production matches GitHub `main`.
-- Treat `/var/www/VietTutor-Studio/.env`, `prisma/dev.db`, and `uploads` as server-local operational state.
-- Use `bash scripts/deploy.sh` for code-only releases.
-- Use `bash scripts/deploy.sh --with-db-push` only when Prisma schema changes are included.
+- 每次编辑必须更新“最近核验”时间并注明时区和核验范围。
+- “当前状态”只写亲自验证或有可靠输出支持的事实；推测和计划只能进入“开放行动”。
+- 证书、commit、运行时、备份等值变化时直接替换旧值；旧事实移入 CHANGELOG 的 `Operations`，不要在本文件保留历史段落。
+- 每个行动必须有优先级、负责人、截止时间、状态和完成证据。未知负责人写“待指定”，不能留空。
+- 不在这里复制产品功能列表、部署步骤或故障长日志；分别放入 README、DEPLOY 和外部日志系统。
+- 不记录密码、API Key、Cookie、私钥、完整 `.env`、服务器公网 IP 或备份下载地址。
+- 公网核验不能证明服务器内部配置；没有 SSH 证据时必须明确标记“待复核”。

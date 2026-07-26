@@ -1,6 +1,6 @@
 import type { SpeakingStructuredContent } from "@/types/assignment";
 
-const sentenceEndPattern = /[^.;。；!?！？]+[.;。；!?！？]+/g;
+const sentenceEndPattern = /[^.;。；!?！？]+(?:[.;。；!?！？]+|$)/g;
 const skippableRtfDestinations = new Set([
   "colortbl",
   "datastore",
@@ -259,7 +259,7 @@ export function buildSpeakingTextAssignment(params: {
   const sentences = splitSpeakingSentences(params.text);
 
   if (sentences.length === 0) {
-    throw new Error("文件中没有识别到可互动句子。请至少使用 ; 或 . 作为句子结尾。");
+    throw new Error("文件中没有识别到可互动句子。");
   }
 
   return {

@@ -19,11 +19,14 @@ const navItems: Array<{
   { href: "/settings", label: "设置", icon: Settings2 }
 ];
 
-export function SidebarNav() {
+export function SidebarNav({ compact = false }: { compact?: boolean }) {
   const pathname = usePathname();
 
   return (
-    <nav className="space-y-2">
+    <nav
+      aria-label="主要导航"
+      className={cn(compact ? "flex gap-1 overflow-x-auto pb-1" : "space-y-2")}
+    >
       {navItems.map((item) => {
         const active = pathname.startsWith(item.href);
         const Icon = item.icon;
@@ -32,8 +35,10 @@ export function SidebarNav() {
           <Link
             key={item.href}
             href={item.href}
+            aria-current={active ? "page" : undefined}
             className={cn(
-              "flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium transition",
+              "flex items-center gap-3 rounded-2xl text-sm font-medium transition",
+              compact ? "shrink-0 px-3 py-2" : "px-4 py-3",
               active
                 ? "bg-primary text-primary-foreground shadow-sm"
                 : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"

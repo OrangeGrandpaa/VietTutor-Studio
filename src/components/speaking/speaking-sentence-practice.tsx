@@ -1,7 +1,7 @@
 "use client";
 
-import { Mic, Pause, Play, RotateCcw, Square, Trash2, Volume2 } from "lucide-react";
-import { useMemo, useRef, useState } from "react";
+import { LoaderCircle, Mic, Pause, Play, RotateCcw, Square, Trash2, Volume2 } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
@@ -50,21 +50,21 @@ const reviewOptions: Array<{
     level: "ACCURATE",
     label: "准确",
     score: 10,
-    className: "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100",
+    className: "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300 dark:hover:bg-emerald-950/70",
     selectedClassName: "border-emerald-500 bg-emerald-600 text-white hover:bg-emerald-600"
   },
   {
     level: "OKAY",
     label: "一般",
     score: 5,
-    className: "border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100",
+    className: "border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100 dark:border-amber-800 dark:bg-amber-950/50 dark:text-amber-300 dark:hover:bg-amber-950/70",
     selectedClassName: "border-amber-500 bg-amber-500 text-white hover:bg-amber-500"
   },
   {
     level: "MUMBLING",
-    label: "叽里咕噜说些什么呢",
+    label: "听不懂",
     score: 0,
-    className: "border-red-200 bg-red-50 text-red-700 hover:bg-red-100",
+    className: "border-red-200 bg-red-50 text-red-700 hover:bg-red-100 dark:border-red-800 dark:bg-red-950/50 dark:text-red-300 dark:hover:bg-red-950/70",
     selectedClassName: "border-red-500 bg-red-600 text-white hover:bg-red-600"
   }
 ];
@@ -72,11 +72,11 @@ const reviewOptions: Array<{
 function reviewBadge(level: ReviewLevel | null) {
   switch (level) {
     case "ACCURATE":
-      return { label: "准确", className: "border-emerald-200 bg-emerald-50 text-emerald-700" };
+      return { label: "准确", className: "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300" };
     case "OKAY":
-      return { label: "一般", className: "border-amber-200 bg-amber-50 text-amber-700" };
+      return { label: "一般", className: "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-800 dark:bg-amber-950/50 dark:text-amber-300" };
     case "MUMBLING":
-      return { label: "听不懂", className: "border-red-200 bg-red-50 text-red-700" };
+      return { label: "听不懂", className: "border-red-200 bg-red-50 text-red-700 dark:border-red-800 dark:bg-red-950/50 dark:text-red-300" };
     default:
       return { label: "待判断", className: "border-border bg-card text-muted-foreground" };
   }
@@ -85,14 +85,14 @@ function reviewBadge(level: ReviewLevel | null) {
 function progressBadge(status: ItemProgressStatus) {
   switch (status) {
     case "REVIEWED":
-      return { label: progressStatusLabel(status), className: "border-emerald-200 bg-emerald-50 text-emerald-700" };
+      return { label: progressStatusLabel(status), className: "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300" };
     case "UNREVIEWED":
       return { label: progressStatusLabel(status), className: "border-border bg-card text-muted-foreground" };
     case "IN_PROGRESS":
-      return { label: progressStatusLabel(status), className: "border-amber-200 bg-amber-50 text-amber-700" };
+      return { label: progressStatusLabel(status), className: "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-800 dark:bg-amber-950/50 dark:text-amber-300" };
     case "NOT_STARTED":
     default:
-      return { label: progressStatusLabel("NOT_STARTED"), className: "border-red-200 bg-red-50 text-red-700" };
+      return { label: progressStatusLabel("NOT_STARTED"), className: "border-red-200 bg-red-50 text-red-700 dark:border-red-800 dark:bg-red-950/50 dark:text-red-300" };
   }
 }
 
@@ -120,22 +120,50 @@ export function SpeakingSentencePractice({
 }) {
   const router = useRouter();
   const [activeUnitId, setActiveUnitId] = useState<string | null>(units[0]?.id ?? null);
-  const [recordingState, setRecordingState] = useState<"idle" | "recording" | "paused" | "ready">("idle");
+  const [recordingState, setRecordingState] = useState<
+    "idle" | "requesting" | "recording" | "paused" | "ready"
+  >("idle");
   const [recordingTarget, setRecordingTarget] = useState<RecordingTarget | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [previewBlob, setPreviewBlob] = useState<Blob | null>(null);
   const [duration, setDuration] = useState(0);
+  const [uploading, setUploading] = useState(false);
+  const [reviewing, setReviewing] = useState(false);
+  const [deletingRecordingId, setDeletingRecordingId] = useState<string | null>(null);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const streamRef = useRef<MediaStream | null>(null);
   const startedAtRef = useRef<number>(0);
+  const previewUrlRef = useRef<string | null>(null);
+  const recordingRequestRef = useRef(false);
+  const mountedRef = useRef(true);
 
   const activeUnit = units.find((unit) => unit.id === activeUnitId) ?? units[0] ?? null;
   const supportedMimeType = useMemo(
     () => mimeTypes.find((type) => typeof MediaRecorder !== "undefined" && MediaRecorder.isTypeSupported(type)),
     []
   );
+
+  useEffect(() => {
+    mountedRef.current = true;
+
+    return () => {
+      mountedRef.current = false;
+      const recorder = mediaRecorderRef.current;
+
+      if (recorder && recorder.state !== "inactive") {
+        recorder.ondataavailable = null;
+        recorder.onstop = null;
+        recorder.stop();
+      }
+
+      streamRef.current?.getTracks().forEach((track) => track.stop());
+      if (previewUrlRef.current) {
+        URL.revokeObjectURL(previewUrlRef.current);
+      }
+    };
+  }, []);
 
   function stopStream() {
     streamRef.current?.getTracks().forEach((track) => track.stop());
@@ -154,8 +182,9 @@ export function SpeakingSentencePractice({
     mediaRecorderRef.current = null;
     stopStream();
 
-    if (previewUrl) {
-      URL.revokeObjectURL(previewUrl);
+    if (previewUrlRef.current) {
+      URL.revokeObjectURL(previewUrlRef.current);
+      previewUrlRef.current = null;
     }
 
     setPreviewBlob(null);
@@ -168,6 +197,13 @@ export function SpeakingSentencePractice({
 
   function selectUnit(unitId: string) {
     if (unitId !== activeUnitId) {
+      if (
+        recordingState !== "idle" &&
+        !window.confirm("切换句子会丢弃尚未保存的录音，确认继续吗？")
+      ) {
+        return;
+      }
+
       resetPreview(unitId);
       return;
     }
@@ -175,10 +211,27 @@ export function SpeakingSentencePractice({
     setActiveUnitId(unitId);
   }
 
-  async function startRecording(target: RecordingTarget) {
+  async function startRecording(target: RecordingTarget, replaceCurrent = false) {
+    if (recordingRequestRef.current || (!replaceCurrent && recordingState !== "idle")) {
+      return;
+    }
+
+    recordingRequestRef.current = true;
     try {
       resetPreview(activeUnitId);
+      setRecordingState("requesting");
+      setRecordingTarget(target);
+      if (target.scope === "UNIT") {
+        setActiveUnitId(target.unitId);
+      }
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+
+      if (!mountedRef.current) {
+        stream.getTracks().forEach((track) => track.stop());
+        return;
+      }
+
+      streamRef.current = stream;
       const recorder = new MediaRecorder(stream, supportedMimeType ? { mimeType: supportedMimeType } : undefined);
 
       chunksRef.current = [];
@@ -196,6 +249,10 @@ export function SpeakingSentencePractice({
       recorder.onstop = () => {
         const blob = new Blob(chunksRef.current, { type: recorder.mimeType || "audio/webm" });
         const url = URL.createObjectURL(blob);
+        if (previewUrlRef.current) {
+          URL.revokeObjectURL(previewUrlRef.current);
+        }
+        previewUrlRef.current = url;
         setPreviewBlob(blob);
         setPreviewUrl(url);
         setDuration((Date.now() - startedAtRef.current) / 1000);
@@ -206,15 +263,13 @@ export function SpeakingSentencePractice({
       recorder.start();
       startedAtRef.current = Date.now();
       mediaRecorderRef.current = recorder;
-      streamRef.current = stream;
-      if (target.scope === "UNIT") {
-        setActiveUnitId(target.unitId);
-      }
       setRecordingTarget(target);
       setRecordingState("recording");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "无法访问麦克风。");
       resetPreview(activeUnitId);
+    } finally {
+      recordingRequestRef.current = false;
     }
   }
 
@@ -223,32 +278,34 @@ export function SpeakingSentencePractice({
       return;
     }
 
-    await startRecording(recordingTarget);
+    await startRecording(recordingTarget, true);
   }
 
   async function uploadPreview() {
-    if (!previewBlob || !recordingTarget) {
+    if (!previewBlob || !recordingTarget || uploading) {
       return;
     }
 
+    const target = recordingTarget;
+    setUploading(true);
     try {
       const extension = previewBlob.type.includes("wav") ? "wav" : "webm";
       const fileName =
-        recordingTarget.scope === "ASSIGNMENT"
+        target.scope === "ASSIGNMENT"
           ? "full-text-recording"
-          : recordingTarget.kind === "TEACHER_STANDARD"
+          : target.kind === "TEACHER_STANDARD"
             ? "teacher-recording"
             : "student-recording";
       const file = new File([previewBlob], `${fileName}.${extension}`, { type: previewBlob.type || "audio/webm" });
       const formData = new FormData();
       formData.append("audio", file);
       formData.append("duration", String(duration));
-      formData.append("kind", recordingTarget.kind);
+      formData.append("kind", target.kind);
 
-      if (recordingTarget.scope === "ASSIGNMENT") {
-        formData.append("assignmentId", recordingTarget.assignmentId);
+      if (target.scope === "ASSIGNMENT") {
+        formData.append("assignmentId", target.assignmentId);
       } else {
-        formData.append("speakingUnitId", recordingTarget.unitId);
+        formData.append("speakingUnitId", target.unitId);
       }
 
       const response = await fetch("/api/recordings", {
@@ -263,20 +320,29 @@ export function SpeakingSentencePractice({
       }
 
       toast.success(
-        recordingTarget.scope === "ASSIGNMENT"
+        target.scope === "ASSIGNMENT"
           ? "全文录音已保存。"
-          : recordingTarget.kind === "TEACHER_STANDARD"
+          : target.kind === "TEACHER_STANDARD"
             ? "教师发音已保存。"
             : "学生录音已保存。"
       );
       router.refresh();
-      resetPreview(recordingTarget.scope === "UNIT" ? recordingTarget.unitId : activeUnitId);
+      resetPreview(target.scope === "UNIT" ? target.unitId : activeUnitId);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "录音上传失败。");
+    } finally {
+      if (mountedRef.current) {
+        setUploading(false);
+      }
     }
   }
 
   async function deleteRecording(recordingId: string) {
+    if (deletingRecordingId || !window.confirm("确认删除这条录音吗？如果是学生录音，相关批阅结果会被重置。")) {
+      return;
+    }
+
+    setDeletingRecordingId(recordingId);
     try {
       const response = await fetch(`/api/recordings/${recordingId}`, {
         method: "DELETE"
@@ -290,14 +356,23 @@ export function SpeakingSentencePractice({
       router.refresh();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "删除失败。");
+    } finally {
+      setDeletingRecordingId(null);
     }
   }
 
   async function saveReview(level: ReviewLevel) {
-    if (!activeUnit) {
+    if (!activeUnit || reviewing) {
       return;
     }
 
+    const hasStudentRecording = activeUnit.recordings.some((recording) => recording.kind === "STUDENT");
+    if (!hasStudentRecording) {
+      toast.error("请先保存学生录音，再进行发音判断。");
+      return;
+    }
+
+    setReviewing(true);
     try {
       const response = await fetch(`/api/assignments/speaking/${assignmentId}/review`, {
         method: "POST",
@@ -320,6 +395,8 @@ export function SpeakingSentencePractice({
       router.refresh();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "批阅保存失败。");
+    } finally {
+      setReviewing(false);
     }
   }
 
@@ -334,7 +411,7 @@ export function SpeakingSentencePractice({
   return (
     <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
       <Card className="overflow-hidden border-primary/10 bg-card/90">
-        <CardHeader className="border-b border-border/60 bg-gradient-to-br from-secondary/70 via-card to-emerald-50/60">
+        <CardHeader className="border-b border-border/60 bg-gradient-to-br from-secondary/70 via-card to-emerald-50/60 dark:to-emerald-950/20">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <CardTitle>口语朗读文本</CardTitle>
@@ -345,8 +422,8 @@ export function SpeakingSentencePractice({
           </div>
         </CardHeader>
         <CardContent className="p-0">
-          <article className="min-h-[520px] bg-[linear-gradient(180deg,rgba(255,255,255,0.92),rgba(248,245,235,0.72))] p-6 sm:p-8">
-            <section className="mb-5 rounded-2xl border border-primary/15 bg-white/75 p-4 shadow-sm">
+          <article className="min-h-[520px] bg-background/55 p-6 sm:p-8">
+            <section className="mb-5 rounded-2xl border border-primary/15 bg-card/80 p-4 shadow-sm">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
                   <h3 className="font-semibold">全文录音</h3>
@@ -367,14 +444,21 @@ export function SpeakingSentencePractice({
               {fullRecordings.length > 0 ? (
                 <div className="mt-4 space-y-3">
                   {fullRecordings.map((recording, index) => (
-                    <div key={recording.id} className="rounded-xl bg-secondary/35 p-3">
+                      <div key={recording.id} className="rounded-xl bg-secondary/35 p-3">
                       <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
                         <span className="text-sm font-medium">全文录音 {index + 1}</span>
                         <span className="text-xs text-muted-foreground">{formatDuration(recording.duration)}</span>
                       </div>
                       <div className="flex flex-wrap items-center gap-2">
-                        <audio controls className="min-w-0 flex-1" src={`/api/files/${recording.id}?kind=recording`} />
-                        <Button variant="ghost" size="icon" onClick={() => deleteRecording(recording.id)}>
+                        <audio controls preload="metadata" className="min-w-0 flex-1" src={`/api/files/${recording.id}?kind=recording`} />
+                        <Button
+                          aria-label="删除全文录音"
+                          title="删除全文录音"
+                          variant="ghost"
+                          size="icon"
+                          disabled={deletingRecordingId !== null}
+                          onClick={() => deleteRecording(recording.id)}
+                        >
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
@@ -397,6 +481,12 @@ export function SpeakingSentencePractice({
                       </p>
                     </div>
                     <div className="flex flex-wrap gap-2">
+                      {recordingState === "requesting" ? (
+                        <span className="inline-flex min-h-10 items-center gap-2 px-2 text-sm text-muted-foreground">
+                          <LoaderCircle className="h-4 w-4 animate-spin" />
+                          正在请求麦克风
+                        </span>
+                      ) : null}
                       {recordingState === "recording" ? (
                         <>
                           <Button variant="outline" onClick={() => mediaRecorderRef.current?.pause()}>
@@ -429,7 +519,9 @@ export function SpeakingSentencePractice({
                       ) : null}
                       {recordingState === "ready" ? (
                         <>
-                          <Button onClick={() => uploadPreview()}>保存录音</Button>
+                          <Button disabled={uploading} onClick={() => uploadPreview()}>
+                            {uploading ? "保存中..." : "保存录音"}
+                          </Button>
                           <Button variant="outline" onClick={() => restartRecording()}>
                             <RotateCcw className="mr-2 h-4 w-4" />
                             重录
@@ -460,10 +552,10 @@ export function SpeakingSentencePractice({
                     onClick={() => selectUnit(unit.id)}
                     className={cn(
                       "block w-full rounded-xl border px-3 py-1 text-left font-serif font-semibold tracking-wide transition-all",
-                      "hover:-translate-y-0.5 hover:border-primary/40 hover:bg-white hover:shadow-soft",
+                      "hover:-translate-y-0.5 hover:border-primary/40 hover:bg-accent/60 hover:shadow-soft",
                       isActive
-                        ? "border-primary/40 bg-white shadow-soft"
-                        : "border-transparent bg-white/45"
+                        ? "border-primary/40 bg-card shadow-soft"
+                        : "border-transparent bg-card/55"
                     )}
                   >
                     <span className="mr-3 align-middle text-sm font-bold font-sans text-muted-foreground">
@@ -546,8 +638,15 @@ export function SpeakingSentencePractice({
                           <span className="text-xs text-muted-foreground">{formatDuration(recording.duration)}</span>
                         </div>
                         <div className="flex flex-wrap items-center gap-2">
-                          <audio controls className="min-w-0 flex-1" src={`/api/files/${recording.id}?kind=recording`} />
-                          <Button variant="ghost" size="icon" onClick={() => deleteRecording(recording.id)}>
+                          <audio controls preload="metadata" className="min-w-0 flex-1" src={`/api/files/${recording.id}?kind=recording`} />
+                          <Button
+                            aria-label="删除学生录音"
+                            title="删除学生录音"
+                            variant="ghost"
+                            size="icon"
+                            disabled={deletingRecordingId !== null}
+                            onClick={() => deleteRecording(recording.id)}
+                          >
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         </div>
@@ -581,14 +680,21 @@ export function SpeakingSentencePractice({
                 {activeTeacherRecordings.length > 0 ? (
                   <div className="space-y-3">
                     {activeTeacherRecordings.map((recording, index) => (
-                      <div key={recording.id} className="rounded-xl bg-emerald-50/70 p-3">
+                      <div key={recording.id} className="rounded-xl bg-emerald-50/70 p-3 dark:bg-emerald-950/25">
                         <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
                           <span className="text-sm font-medium">教师发音 {index + 1}</span>
                           <span className="text-xs text-muted-foreground">{formatDuration(recording.duration)}</span>
                         </div>
                         <div className="flex flex-wrap items-center gap-2">
-                          <audio controls className="min-w-0 flex-1" src={`/api/files/${recording.id}?kind=recording`} />
-                          <Button variant="ghost" size="icon" onClick={() => deleteRecording(recording.id)}>
+                          <audio controls preload="metadata" className="min-w-0 flex-1" src={`/api/files/${recording.id}?kind=recording`} />
+                          <Button
+                            aria-label="删除教师录音"
+                            title="删除教师录音"
+                            variant="ghost"
+                            size="icon"
+                            disabled={deletingRecordingId !== null}
+                            onClick={() => deleteRecording(recording.id)}
+                          >
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         </div>
@@ -614,6 +720,12 @@ export function SpeakingSentencePractice({
                       </p>
                     </div>
                     <div className="flex flex-wrap gap-2">
+                      {recordingState === "requesting" ? (
+                        <span className="inline-flex min-h-10 items-center gap-2 px-2 text-sm text-muted-foreground">
+                          <LoaderCircle className="h-4 w-4 animate-spin" />
+                          正在请求麦克风
+                        </span>
+                      ) : null}
                       {recordingState === "recording" ? (
                         <>
                           <Button variant="outline" onClick={() => mediaRecorderRef.current?.pause()}>
@@ -646,7 +758,9 @@ export function SpeakingSentencePractice({
                       ) : null}
                       {recordingState === "ready" ? (
                         <>
-                          <Button onClick={() => uploadPreview()}>保存录音</Button>
+                          <Button disabled={uploading} onClick={() => uploadPreview()}>
+                            {uploading ? "保存中..." : "保存录音"}
+                          </Button>
                           <Button variant="outline" onClick={() => restartRecording()}>
                             <RotateCcw className="mr-2 h-4 w-4" />
                             重录
@@ -677,6 +791,8 @@ export function SpeakingSentencePractice({
                         "h-auto min-h-12 whitespace-normal border px-3 py-3",
                         activeUnit.reviewLevel === option.level ? option.selectedClassName : option.className
                       )}
+                      disabled={reviewing || activeStudentRecordings.length === 0}
+                      title={activeStudentRecordings.length === 0 ? "请先保存学生录音" : undefined}
                       onClick={() => saveReview(option.level)}
                     >
                       {option.label}

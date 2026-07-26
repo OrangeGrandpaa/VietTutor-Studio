@@ -57,7 +57,7 @@ export default async function DashboardPage() {
         <section className="grid gap-4 xl:grid-cols-[1.25fr_0.75fr]">
           <Card>
             <CardHeader>
-              <CardTitle>正确率趋势</CardTitle>
+              <CardTitle>评分趋势</CardTitle>
             </CardHeader>
             <CardContent>
               <AccuracyTrendChart data={data.trend} />
@@ -127,7 +127,7 @@ export default async function DashboardPage() {
             </CardHeader>
             <CardContent className="space-y-3 text-sm text-muted-foreground">
               <p>PowerPoint 课件：{data.materials.powerpoint} 份。</p>
-              <p>正确率趋势和课件库会继续累积，计划扩展：学习日历、词汇本和错题本模块。</p>
+              <p>写作正确率与口语折算分分开呈现，避免将未评分记录误认为 0 分。</p>
             </CardContent>
           </Card>
         </section>

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { AssignmentType } from "@prisma/client";
 
 import { AssignmentStatusBadge } from "@/components/assignment/assignment-status-badge";
 import { AssignmentTitleEditor } from "@/components/assignment/assignment-title-editor";
@@ -23,7 +24,7 @@ export default async function SpeakingAssignmentDetailPage({
   await requireAuth();
   const { id } = await params;
   const assignment = await prisma.assignment.findUnique({
-    where: { id },
+    where: { id, type: AssignmentType.SPEAKING },
     include: {
       recordings: {
         orderBy: { createdAt: "desc" }

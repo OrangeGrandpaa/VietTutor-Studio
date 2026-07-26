@@ -1,7 +1,7 @@
-import { AssignmentStatus, SpeakingReviewLevel } from "@prisma/client";
+import { AssignmentType, RecordingKind, SpeakingReviewLevel } from "@prisma/client";
 import { NextRequest } from "next/server";
 
-import { buildSpeakingReviewGroups } from "@/lib/assignment/speaking";
+import { refreshSpeakingAssignmentSummary } from "@/lib/assignment/speaking-summary";
 import { ensureAuthenticatedApi } from "@/lib/auth/session";
 import { prisma } from "@/lib/db/prisma";
 import { jsonError, jsonOk } from "@/lib/utils/http";
@@ -43,54 +43,55 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     return jsonError("缺少朗读句子或批阅结果。");
   }
 
-  const updatedUnits = await prisma.speakingUnit.updateMany({
-    where: {
-      id: body.speakingUnitId,
-      assignmentId: id
-    },
-    data: {
-      reviewLevel,
-      reviewScore: reviewScores[reviewLevel]
+  const result = await prisma.$transaction(async (tx) => {
+    const unit = await tx.speakingUnit.findFirst({
+      where: {
+        id: body.speakingUnitId,
+        assignmentId: id,
+        assignment: { type: AssignmentType.SPEAKING }
+      },
+      select: {
+        id: true,
+        recordings: {
+          where: { kind: RecordingKind.STUDENT },
+          take: 1,
+          select: { id: true }
+        }
+      }
+    });
+
+    if (!unit) {
+      return { error: "NOT_FOUND" as const };
     }
+
+    if (unit.recordings.length === 0) {
+      return { error: "NO_RECORDING" as const };
+    }
+
+    await tx.speakingUnit.update({
+      where: { id: unit.id },
+      data: {
+        reviewLevel,
+        reviewScore: reviewScores[reviewLevel]
+      }
+    });
+
+    const stats = await refreshSpeakingAssignmentSummary(tx, id);
+    return { stats };
   });
 
-  if (updatedUnits.count === 0) {
+  if ("error" in result && result.error === "NOT_FOUND") {
     return jsonError("朗读句子不存在。", 404);
   }
 
-  const assignment = await prisma.assignment.findUnique({
-    where: { id },
-    include: {
-      speakingUnits: {
-        include: {
-          recordings: {
-            orderBy: { createdAt: "desc" }
-          }
-        },
-        orderBy: { orderIndex: "asc" }
-      }
-    }
-  });
-
-  if (!assignment) {
-    return jsonError("作业不存在。", 404);
+  if ("error" in result && result.error === "NO_RECORDING") {
+    return jsonError("请先保存学生录音，再进行发音判断。", 400);
   }
 
-  const { stats } = buildSpeakingReviewGroups(assignment.speakingUnits);
-  const nextStatus =
-    stats.reviewedUnits === 0
-      ? AssignmentStatus.PENDING_REVIEW
-      : stats.reviewedUnits >= stats.totalUnits
-        ? AssignmentStatus.REVIEWED
-        : AssignmentStatus.REVIEWING;
-
-  await prisma.assignment.update({
-    where: { id },
-    data: {
-      overallScore: stats.averageOverallScore,
-      status: nextStatus
-    }
+  return jsonOk({
+    success: true,
+    reviewLevel,
+    reviewScore: reviewScores[reviewLevel],
+    stats: result.stats
   });
-
-  return jsonOk({ success: true, reviewLevel, reviewScore: reviewScores[reviewLevel], stats });
 }

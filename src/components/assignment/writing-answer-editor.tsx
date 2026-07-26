@@ -418,12 +418,22 @@ export function WritingAnswerEditor({
 
   async function selectChoice(option: ChoiceOption) {
     const nextAnswer = option.value;
+
+    if (nextAnswer === answer) {
+      return;
+    }
+
     setAnswers([nextAnswer]);
     await saveAnswer(nextAnswer);
   }
 
   async function selectReadingChoice(questionIndex: number, option: ChoiceOption) {
     const nextAnswers = Array.from({ length: readingChoiceGroups.length }, (_, index) => answers[index] ?? "");
+
+    if (nextAnswers[questionIndex] === option.value) {
+      return;
+    }
+
     nextAnswers[questionIndex] = option.value;
     const nextAnswer = serializeChoiceAnswers(nextAnswers);
 

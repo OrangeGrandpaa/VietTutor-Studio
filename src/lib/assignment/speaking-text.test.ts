@@ -26,4 +26,16 @@ describe("speaking text helpers", () => {
       }
     ]);
   });
+
+  it("keeps trailing text when the final sentence has no punctuation", () => {
+    const result = buildSpeakingTextAssignment({
+      text: "Xin chào. Câu cuối không có dấu",
+      title: "口语练习"
+    });
+
+    expect(result.units.map((unit) => unit.content)).toEqual([
+      "Xin chào.",
+      "Câu cuối không có dấu"
+    ]);
+  });
 });

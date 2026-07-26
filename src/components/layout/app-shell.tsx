@@ -21,8 +21,25 @@ export function AppShell({
 }) {
   return (
     <div className="min-h-screen">
-      <div className="mx-auto grid min-h-screen max-w-[1600px] gap-6 px-4 py-4 lg:grid-cols-[280px_minmax(0,1fr)] lg:px-6">
-        <aside className="lg:sticky lg:top-4 lg:h-[calc(100vh-2rem)]">
+      <div className="mx-auto grid min-h-screen max-w-[1600px] grid-cols-[minmax(0,1fr)] gap-6 px-4 py-4 lg:grid-cols-[280px_minmax(0,1fr)] lg:px-6">
+        <div className="min-w-0 lg:hidden">
+          <Card className="min-w-0 space-y-3 bg-card/90 p-4">
+            <div className="flex items-center justify-between gap-3">
+              <Link href="/dashboard" className="flex min-w-0 items-center gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground">
+                  <BookOpenText className="h-5 w-5" />
+                </div>
+                <div className="min-w-0">
+                  <p className="truncate font-semibold">Viet Learning Studio</p>
+                  <p className="truncate text-xs text-muted-foreground">越南语学习空间</p>
+                </div>
+              </Link>
+              <ThemeToggle />
+            </div>
+            <SidebarNav compact />
+          </Card>
+        </div>
+        <aside className="hidden lg:sticky lg:top-4 lg:block lg:h-[calc(100vh-2rem)]">
           <Card className="grid h-full grid-rows-[auto_1fr_auto] gap-6 bg-card/90 p-6">
             <div className="space-y-4">
               <Link href="/dashboard" className="flex items-center gap-3">
@@ -45,10 +62,10 @@ export function AppShell({
             </div>
           </Card>
         </aside>
-        <main className="space-y-6 py-1">
+        <main className="min-w-0 space-y-6 py-1">
           <header className="flex flex-col gap-4 rounded-[1.75rem] border border-border/70 bg-card/75 p-6 shadow-soft backdrop-blur-sm md:flex-row md:items-end md:justify-between">
             <div className="space-y-2">
-              <p className="font-serif text-4xl leading-none text-foreground/90">{title}</p>
+              <h1 className="font-serif text-4xl leading-none text-foreground/90">{title}</h1>
               {description ? <p className="max-w-2xl text-sm text-muted-foreground">{description}</p> : null}
             </div>
             <div className="flex flex-wrap items-center gap-3">

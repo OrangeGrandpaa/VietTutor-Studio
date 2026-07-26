@@ -6,6 +6,7 @@ import { NextRequest } from "next/server";
 import { ensureAuthenticatedApi } from "@/lib/auth/session";
 import { prisma } from "@/lib/db/prisma";
 import { getProtectedFileAccelRedirectPath, getProtectedFileMetadata } from "@/lib/storage";
+import { getFileDispositionType, getSafeResponseMimeType } from "@/lib/storage/file-types";
 import { jsonError } from "@/lib/utils/http";
 
 type FileRecord = {
@@ -142,16 +143,18 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
   const file = await getProtectedFileMetadata(record.filePath);
   const range = parseRange(request.headers.get("range"), file.size);
-  const mimeType = record.mimeType || "application/octet-stream";
-  const disposition = `${download ? "attachment" : "inline"}; filename="${encodeURIComponent(record.fileName)}"`;
+  const mimeType = getSafeResponseMimeType(record.mimeType);
+  const dispositionType = getFileDispositionType(mimeType, download);
+  const disposition = `${dispositionType}; filename="${encodeURIComponent(record.fileName)}"`;
   const etag = `"${file.size}-${file.mtimeMs}"`;
   const baseHeaders = {
     "Accept-Ranges": "bytes",
-    "Cache-Control": "private, max-age=3600",
+    "Cache-Control": "private, no-store, max-age=0",
     "Content-Disposition": disposition,
     "Content-Type": mimeType,
     "ETag": etag,
-    "Last-Modified": file.lastModified
+    "Last-Modified": file.lastModified,
+    "X-Content-Type-Options": "nosniff"
   };
   const accelRedirectPath = getProtectedFileAccelRedirectPath(record.filePath);
 
