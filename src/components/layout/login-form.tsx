@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { resolveLoginRedirect } from "@/lib/auth/redirect";
 
 export function LoginForm() {
   const router = useRouter();
@@ -47,7 +48,7 @@ export function LoginForm() {
               }
 
               toast.success("登录成功。");
-              router.push((searchParams.get("next") ?? "/dashboard") as Route);
+              router.push(resolveLoginRedirect(searchParams.get("next")) as Route);
               router.refresh();
             } catch (error) {
               toast.error(error instanceof Error ? error.message : "登录失败。");

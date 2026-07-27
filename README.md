@@ -1,519 +1,226 @@
 # VietTutor Studio
 
-VietTutor Studio 是一个面向越南语学习的私有教学工作台。它把作业上传、AI 结构化、逐题批阅、口语录音、课件库和学习统计收在一个 Next.js 应用里，适合个人或小范围教学场景使用。
+VietTutor Studio 是一个私有的越南语教学工作台，集中管理写作作业、AI 结构化、逐题批阅、口语录音、课件和学习统计。项目适合单机、小规模教学场景，目前采用 Next.js 单体架构、SQLite 和本地文件存储。
 
-如果你是接手项目的人，建议先读本文件，再按需要查看：
+## 文档地图
 
-- `CHANGELOG.md`：项目变更时间线。
-- `DEPLOY_ALIYUN.md`：阿里云 ECS 从零部署或重建流程。
-- `PRODUCTION_STATUS.md`：当前线上服务器状态、运维事实和已知坑。
+| 文件 | 唯一职责 | 何时更新 |
+| --- | --- | --- |
+| `README.md` | 稳定的开发入口、架构和业务规则 | 安装方式、目录、核心流程或接口契约变化时 |
+| `DEPLOY_ALIYUN.md` | 可重复执行的部署、发布、备份、证书和回滚手册 | 运维步骤或生产基础设施变化时 |
+| `PRODUCTION_STATUS.md` | 最近一次核验的线上事实和未完成行动 | 每次生产核验、发布、证书或故障状态变化时 |
+| `CHANGELOG.md` | 已完成变更的时间线 | 合并或发布用户可见、运维、安全、迁移变更时 |
 
-## Current State
+记录规则：
 
-- 生产域名：`https://vietkiet.cn`、`https://www.vietkiet.cn`
-- 生产环境：Alibaba Cloud Linux 3 + Nginx + systemd + Next.js
-- 数据库：Prisma + SQLite
-- 文件存储：本地 `uploads/`，通过鉴权 API 读取，不放入 `public/`
-- AI 服务：Kimi / Moonshot，用于写作作业文本抽取和结构化
-- 登录方式：全站访问密码 + HttpOnly 签名 Cookie + 数据库 session
+- README 不追加发布日志、临时故障和线上实时值。
+- 部署手册中的每项操作必须同时写明前置条件、命令、验证和回滚。
+- 生产状态只写有证据的事实；计划写入“开放行动”，并填写负责人、截止时间和状态。
+- CHANGELOG 新内容先进入 `Unreleased`，发布后再移动到日期标题；不要把待办事项写成已完成变更。
+- 密码、API Key、Cookie、私钥、服务器公网 IP 等敏感值不得写入任何 Markdown。
 
-生产环境不使用 PM2。仓库里保留的 `ecosystem.config.cjs` 是历史配置，当前稳定方案以 `systemd` 为准。
+## 技术栈
 
-## Tech Stack
-
-- Next.js 15 App Router
-- React 19
-- TypeScript
-- Tailwind CSS
-- Prisma 6
-- SQLite
+- Next.js 15 App Router、React 19、TypeScript
+- Tailwind CSS、Recharts、Framer Motion
+- Prisma 6、SQLite
 - Vitest
-- Kimi / Moonshot API
-- Nginx + systemd for production
+- Kimi / Moonshot Chat Completions API
+- Nginx + systemd（生产）
 
-主要依赖用途：
+主要文件解析依赖：
 
-- `mammoth`：读取 `.docx` 文本。
-- `word-extractor`：读取 `.doc` 文本。
-- `gray-matter`：处理 Markdown frontmatter 和 fallback 拆分。
-- `zod`：校验 Kimi 结构化 JSON。
-- `sonner`：前端 toast。
-- `recharts`：Dashboard 趋势图。
-- `framer-motion`：页面进入动效。
+- `mammoth`：读取 `.docx`
+- `word-extractor`：读取 `.doc`
+- 本地解析器：读取 TXT、Markdown 和 RTF
+- `zod`：校验 AI 结构化 JSON
 
-## Quick Start
+生产环境不使用 PM2。
 
-推荐使用 Node.js 20 LTS。
+## 快速开始
+
+推荐 Node.js 24 LTS；项目允许 Node.js 22 到 26。版本基线记录在 `.nvmrc` 和 `package.json#engines`。
 
 ```bash
+nvm use
 npm ci
 cp .env.example .env
 npm run db:init
 npm run dev
 ```
 
-打开：
+打开 `http://localhost:3000`，使用 `.env` 中的 `SITE_ACCESS_PASSWORD` 登录。
 
-```text
-http://localhost:3000
-```
+## 环境变量
 
-首次本地运行时，登录密码来自 `.env` 里的 `SITE_ACCESS_PASSWORD`。
+以 `.env.example` 为准，不要在文档中复制真实生产值。
 
-## Environment Variables
+| 变量 | 用途 |
+| --- | --- |
+| `DATABASE_URL` | SQLite 地址，默认 `file:./dev.db` 对应 `prisma/dev.db` |
+| `SITE_ACCESS_PASSWORD` | 全站共享访问密码；生产至少 12 个字符 |
+| `SESSION_SECRET` | Cookie HMAC 密钥；生产至少 32 个字符 |
+| `SESSION_MAX_AGE_DAYS` | 登录会话有效天数 |
+| `KIMI_API_KEY` | 写作结构化所需的 Kimi API Key |
+| `KIMI_BASE_URL` | Kimi API 地址 |
+| `KIMI_MODEL` | Kimi 模型标识 |
+| `KIMI_MAX_TOKENS` | 单次结构化最大输出 token |
+| `KIMI_MAX_INPUT_CHARS` | 送入 AI 的最大字符数，避免超大请求和意外费用 |
+| `KIMI_REQUEST_TIMEOUT_MS` | 单次上游请求超时 |
+| `KIMI_MAX_RETRIES` | 网络、超时、429 和 5xx 的最大重试次数 |
+| `MAX_UPLOAD_SIZE_MB` | 受保护上传的最大文件大小 |
+| `PROTECTED_FILE_ACCEL_REDIRECT_PREFIX` | 可选的 Nginx `X-Accel-Redirect` 内部路径 |
 
-`.env.example` 已包含当前需要的环境变量：
-
-```env
-DATABASE_URL="file:./dev.db"
-SITE_ACCESS_PASSWORD="change-this-password"
-SESSION_SECRET="replace-with-a-long-random-secret"
-SESSION_MAX_AGE_DAYS="14"
-KIMI_API_KEY=""
-KIMI_BASE_URL="https://api.moonshot.ai/v1"
-KIMI_MODEL="moonshot-v1-8k"
-KIMI_MAX_TOKENS="8192"
-KIMI_REQUEST_TIMEOUT_MS="600000"
-KIMI_MAX_RETRIES="1"
-MAX_UPLOAD_SIZE_MB="20"
-PROTECTED_FILE_ACCEL_REDIRECT_PREFIX=""
-```
-
-说明：
-
-- `DATABASE_URL="file:./dev.db"` 会让 SQLite 文件落在 `prisma/dev.db`。
-- `SESSION_SECRET` 必须是强随机字符串，生产环境不要复用示例值。
-- `KIMI_API_KEY` 为空时，依赖 Kimi 的上传或结构化路径会失败。
-- `KIMI_MAX_TOKENS` 控制结构化输出 token 上限。生产可按模型能力调高，例如 `16384`。
-- `KIMI_REQUEST_TIMEOUT_MS` 控制每次 Kimi HTTP 请求等待上游响应的超时时间，默认 600000ms。
-- `KIMI_MAX_RETRIES` 控制 Kimi 瞬时网络/上游超时错误的重试次数，默认 1 次。
-- `MAX_UPLOAD_SIZE_MB` 控制所有受保护上传的最大文件大小。
-- `PROTECTED_FILE_ACCEL_REDIRECT_PREFIX` 可选。生产 Nginx 配好内部文件位置后设为 `"/_protected_uploads/"`，让 Next.js 只做鉴权，实际文件传输交给 Nginx。
-
-生成 session secret：
+生成随机 session secret：
 
 ```bash
 openssl rand -base64 32
 ```
 
-## Common Commands
+## 常用命令
 
 ```bash
 npm run dev          # 本地开发
-npm run build        # prisma generate + next build
+npm run build        # 生成 Prisma Client 并构建生产包
 npm run start        # 启动生产构建
-npm run test         # 运行 Vitest
-npm run test:watch   # 监听测试
-npm run db:generate  # 生成 Prisma Client
-npm run db:push      # 将 Prisma schema 推到 SQLite
-npm run db:init      # 生成 Prisma Client、推 schema、创建 uploads 子目录
-npm run db:seed      # 写入示例课件记录
+npm run lint         # 静态检查
+npm run typecheck    # 独立 TypeScript 检查
+npm run test         # 运行测试
+npm run check        # lint + typecheck + test
+npm run env:check    # 校验生产 .env 的最低要求
+npm run db:init      # 生成 Client、同步 schema、创建上传目录
+npm run db:push      # 将当前 schema 同步到 SQLite
+npm run db:seed      # 写入示例记录
 ```
 
-注意：当前 `lint` 脚本是 `next lint`，Next.js 15 项目里如果命令不可用，需要后续迁移到 ESLint CLI。
+`next lint` 在 Next.js 15 中已弃用；升级 Next.js 16 时应一并迁移到 ESLint CLI。
 
-## Project Structure
+## 项目结构
 
 ```text
 .
-├── src/app                 # Next.js App Router 页面和 API Routes
-├── src/components          # 页面组件、业务组件和 UI primitives
-├── src/lib                 # 认证、AI、作业、存储、dashboard、utils
-├── src/prompts             # Kimi 结构化提示词
+├── src/app                 # 页面与 Route Handlers
+├── src/components          # 布局、业务组件和 UI primitives
+├── src/lib                 # 认证、AI、作业、存储、统计和工具
+├── src/prompts             # 写作结构化提示词
 ├── src/types               # 业务类型和第三方声明
 ├── prisma/schema.prisma    # SQLite 数据模型
-├── scripts/init-db.ts      # 创建 uploads 子目录
+├── scripts/init-db.ts      # 初始化上传目录
 ├── scripts/deploy.sh       # 生产发布脚本
+├── scripts/validate-production-env.mjs
 ├── uploads/.gitkeep        # 本地上传目录占位
-├── CHANGELOG.md            # 变更记录
-├── DEPLOY_ALIYUN.md        # 阿里云部署手册
-└── PRODUCTION_STATUS.md    # 当前生产状态
+├── DEPLOY_ALIYUN.md
+├── PRODUCTION_STATUS.md
+└── CHANGELOG.md
 ```
 
-## Main Features
+## 业务流程
 
-### Authentication
+### 认证
 
-- `middleware.ts` 保护 `/`、`/dashboard`、`/assignments`、`/materials`、`/settings`。
-- 登录页提交到 `/api/auth/login`。
-- 登录成功后创建 `UserSession`，并写入 `viet_study_session` HttpOnly Cookie。
-- Cookie 使用 HMAC-SHA256 签名，session token 的 hash 存入数据库。
-- `/api/auth/logout` 会撤销当前 session 并清除 Cookie。
+1. `/api/auth/login` 校验共享密码。
+2. 服务端生成随机 session，仅把 SHA-256 hash 存入数据库。
+3. 浏览器收到 HMAC 签名的 HttpOnly Cookie。
+4. 页面通过 `requireAuth()`，API 通过 `ensureAuthenticatedApi()` 校验数据库 session。
+5. 登录后的 `next` 只允许站内绝对路径，拒绝协议、双斜杠、反斜杠和控制字符。
 
-### Dashboard
+中间件只负责快速跳转，不能替代页面和 API 的服务端鉴权。
 
-Dashboard 汇总：
+### 写作作业
 
-- 作业总数、待批阅数、已完成数。
-- 写作平均正确率、口语平均分。
-- 最近写作和口语作业。
-- 正确率趋势。
-- 课件库统计和连续学习天数。
+支持 `.txt`、`.md`、`.markdown`、`.rtf`、`.doc` 和 `.docx`。
 
-核心数据入口是 `src/lib/dashboard/get-dashboard-data.ts`。
+1. 服务端先校验扩展名和 MIME 的明确配对，再保存原文件。
+2. TXT、Markdown、RTF、DOC、DOCX 在本地抽取文本并修复常见乱码。
+3. 创建 `WRITING` 作业，使用 Next.js `after()` 在后台调用 Kimi。
+4. AI JSON 通过 Zod 和业务 normalization 后，事务替换题目 sections。
+5. 用户逐题作答、批阅，汇总作业状态和正确率。
 
-### Writing Assignments
+重要约束：
 
-写作作业支持上传：
+- AI 未成功前不展示本地 fallback 题目；历史 fallback 代码已删除。
+- AI 重试进行中拒绝并发重试；已有答案或批阅时禁止重构，避免覆盖用户工作。
+- AI 返回零道题时视为失败，不删除原有题目。
+- 选择相同答案不会重复发请求，也不会清空已有批阅。
+- 作业详情查询和修改必须同时限定 `AssignmentType.WRITING`。
 
-- `.txt`
-- `.md`、`.markdown`
-- `.rtf`
-- `.doc`、`.docx`
+### 口语作业
 
-处理流程：
+支持 `.txt` 和 `.rtf`，不调用 Kimi。
 
-1. 上传文件到 `uploads/assignments/writing`。
-2. 服务端从 TXT、Markdown、RTF、DOC 或 DOCX 中本地抽取文本。
-3. 立即创建作业记录，但不创建基础拆分题目。
-4. 返回详情页，页面只显示“AI 正在后台结构化”和刷新按钮。
-5. 通过 Next.js `after()` 在后台调用 Kimi 重新结构化。
-6. 如果 AI 成功，则写入 AI 识别出的题目结构并显示逐题作答和批阅区域。
-7. 如果 AI 失败，详情页只展示完整失败原因和重新调用 AI 按钮，不展示基础拆分结果。
-8. 用户逐题输入学生答案，再标记正确/错误和批注。
+1. 服务端本地抽取文本并按句末标点拆句，末尾无标点文本也会保留。
+2. 全文录音挂在 `Recording.assignmentId`。
+3. 逐句学生录音和教师示范录音挂在 `Recording.speakingUnitId`，以 `kind` 区分。
+4. 句子发音判断为 10 / 5 / 0 分，综合分是已批阅句子的算术平均。
 
-重要行为：
+录音新增或删除后，相关句子的旧评分会失效并重新计算作业汇总。没有学生录音时不能提交发音判断。作业详情查询和修改必须同时限定 `AssignmentType.SPEAKING`。
 
-- 写作作业列表支持 `全部`、`已批阅`、`未批阅` 三种筛选。
-- 写作上传仅接受 TXT、Word、Markdown 和 RTF 文件；PDF、PPT、Excel、CSV、HTML、JSON、XML 等复杂格式会被拒绝。
-- 写作作业详情页右上角提供作业名称修改控件，保存后立即刷新页面标题。
-- AI 仍在后台结构化的作业会显示 `AI结构化中` 状态。
-- AI 未成功前，writing 详情页不展示基础拆分题目、错题筛选或右侧总体批阅面板。
-- AI 结构化失败时，详情页会展示完整错误信息，包括可用的底层 `cause` 字段。
-- 题目中的 `______` 会在详情页渲染为内联答案输入框，输入框初始宽度匹配下划线长度，并会随输入内容延长。
-- 没有 `______` 的题目会显示“学生答案”自适应文本框，供逐题输入答案。
-- 选择题选项 `A-D` 会显示为可点击按钮，点击选项会直接保存该题答案；阅读理解题中的选项也使用同样交互。
-- 阅读理解中同一道大题包含多道选择小题时，每道小题会单独保存答案；后选的小题不会覆盖前面小题的答案。
-- 答案保存按钮会贴近对应答案输入区，减少题目卡片纵向占用。
-- 保存学生答案会删除该题已有批阅，避免旧批阅套到新答案上；多空题答案会按空位顺序保存。
-- 批阅分数当前是二值逻辑：正确 `100`，错误 `0`。
-- 作业状态根据已批阅题数自动更新为 `PENDING_REVIEW`、`REVIEWING` 或 `REVIEWED`。
-- 页面展示使用更细的派生进度状态：完全没作答显示 `还没做:3`，部分作答显示 `还没做完！`，全部作答但未批阅显示 `未批阅`，部分批阅显示 `批阅中`，全部批阅显示 `已批阅`。
-- 单道写作题同样显示派生状态；多空题只填了一部分时会显示 `还没做完！`，已批阅题目会额外保留正确/错误结果。
-- 详情页顶部支持“只看错题”，右侧总体批阅可跳转到对应题目分组；如果题目中识别到 `练习 13：句型转换` 这类子练习标题，会优先显示子练习导航卡片并跳到该组第一题。
-- AI 结构化会清理单道题目内部空行，并要求作业名称、部分名称使用中文概括。
+### 课件
 
-### Speaking Assignments
+课件支持 PDF、Word、PowerPoint、Markdown、文本、图片、音频和视频。文件存入 `uploads/materials`，数据库只保存元数据；课件不再记录阅读进度、页数或备注。
 
-口语作业支持上传 `.txt` 纯文本和 `.rtf` 富文本，不再调用 Kimi 或 Kimi Files API。
+### 受保护文件
 
-处理流程：
-
-1. 上传 TXT 或 RTF 文件到 `uploads/assignments/speaking`。
-2. 服务端直接读取文本；RTF 会先转成纯文本，再按句末标点拆成朗读句子。当前主要按 `;`、`.` 等句末标点识别可互动句子。
-3. 详情页直接展示美化后的全文朗读文本。
-4. 「口语朗读文本」上方提供全文录音，方便教师先一口气听完整篇朗读。
-5. 点击任一句子后，右侧「句子互动窗体」可保存学生逐句录音、教师发音录音和发音判断。
-6. 发音判断三档为：`准确` 记 10 分，`一般` 记 5 分，`叽里咕噜说些什么呢` 记 0 分。句子标签中 0 分显示为 `听不懂`。
-7. 作业综合分按已批阅句子的分数做算术平均。
-
-重要行为：
-
-- 口语作业列表与写作作业列表保持一致，支持 `全部`、`已批阅`、`未批阅` 三种筛选，并使用紧凑卡片展示 `查看` / `删除` 操作。
-- 口语作业和单句状态也使用同一套派生进度状态：无学生录音显示 `还没做:3`，部分句子已录音显示 `还没做完！`，全部录音但未判断显示 `未批阅`，部分判断显示 `批阅中`，全部判断显示 `已批阅`。
-- 口语作业详情页右上角提供作业名称修改控件，替代全局设置入口。
-- 口语朗读文本标题区不再显示额外句数徽章。
-- 句子互动窗体在桌面端会保持贴顶显示，并在内容较多时内部滚动，避免页面下滑后窗体被截断。
-- 教师发音区域只保留录制入口和已有录音列表，不再显示额外说明文案。
-
-录音保存规则：
-
-- 全文录音保存到 `Recording.assignmentId`，不挂到任何单句。
-- 逐句学生录音和教师发音保存到 `Recording.speakingUnitId`。
-- `Recording.kind` 区分 `STUDENT` 和 `TEACHER_STANDARD`。
-- 删除口语作业时会同时删除全文录音、逐句录音和对应上传文件。
-- 录音窗体支持暂停、停止、保存、重录和取消；`重录` 会保留当前全文/句子录音目标并重新开始录制，`取消` 会丢弃未保存音频并关闭录音窗体。
-
-### Course Materials
-
-课件库支持上传：
-
-- PDF、Word、PowerPoint
-- Markdown / text
-- 图片、音频、视频
-
-文件保存到 `uploads/materials`。列表页使用紧凑单行卡片展示课件名称、类型标签、分类标签、上传时间和操作按钮。详情页会根据 MIME 类型内嵌预览图片、音频、视频和 PDF，其余类型提供下载。课件库只记录标题、文件名、文件路径、MIME 类型、文件类型和课件分类，不再记录学习状态、学习进度、页数或备注。
-
-### Protected Files
-
-所有上传文件都通过 `/api/files/[id]` 读取，参数如下：
+所有文件通过以下入口鉴权读取：
 
 ```text
-kind=assignment | material | recording
-download=1      # 可选，强制下载
+/api/files/<id>?kind=assignment|material|recording
 ```
 
-示例：
+- 读取路径必须位于 `uploads/` 内。
+- 支持流式响应和 HTTP Range。
+- 上传时必须通过扩展名与 MIME 的配对校验。
+- PDF、安全位图、纯文本和音视频可内嵌；Office、RTF、HTML、SVG 等强制下载。
+- 响应包含 `nosniff`，并使用 `private, no-store`，避免退出登录后复用敏感缓存。
+- 生产可使用 Nginx `X-Accel-Redirect` 传输文件，但 Next.js 仍先完成鉴权和归属查询。
 
-```text
-/api/files/<assignmentId>?kind=assignment&download=1
-/api/files/<materialId>?kind=material
-/api/files/<recordingId>?kind=recording
-```
+## 状态与统计口径
 
-`src/lib/storage/index.ts` 会限制读取路径必须位于 `uploads/` 内，避免路径穿越。
+写作和口语统一使用以下派生状态：
 
-文件响应行为：
+- `还没做`：没有答案或学生录音
+- `还没做完！`：只完成一部分
+- `未批阅`：已完成但尚无批阅
+- `批阅中`：只批阅一部分
+- `已批阅`：全部完成批阅
 
-- `/api/files/[id]` 使用流式返回，避免大文件一次性读入服务器内存。
-- 支持 HTTP `Range` 请求，音频、视频、PDF 预览可以按需读取片段。
-- 文件响应带有 `ETag` 和 `Last-Modified`，重复打开课件预览时浏览器可复用缓存。
-- 文件查询只读取路径、文件名和 MIME 类型等必要字段，不加载作业原文等大字段。
-- 生产环境可配置 Nginx `X-Accel-Redirect`。启用后 `/api/files/[id]` 仍负责登录鉴权和文件归属查询，但文件正文由 Nginx 从内部 `uploads/` 位置发送，减少大 PDF、音视频预览占用 Next.js 进程。
+Dashboard 的趋势图只统计已有评分的数据，并分别展示写作正确率和口语得分，不把“未评分”伪装成 0 分。
 
-## Performance Notes
+## 数据与边界
 
-- 作业和课件列表使用分页，每页默认 20 条记录。
-- Dashboard 统计使用数据库 `count`、`aggregate` 和 `groupBy`，避免全量加载历史记录后再计算。
-- Prisma schema 为作业类型/状态/创建时间、课件类型/创建时间建立了索引。
-- 生产文件预览建议启用 Nginx `X-Accel-Redirect`，让大文件传输离开 Next.js 应用进程，降低课件预览拖慢其它页面的概率。
+核心模型：
 
-## AI And Extraction
+- `UserSession`
+- `Assignment`
+- `AssignmentSection` / `TeacherFeedback`
+- `SpeakingUnit` / `Recording`
+- `CourseMaterial`
 
-写作作业文本抽取在 `src/lib/assignment/source-extraction.ts`：
+SQLite 和 `uploads/` 共同构成业务数据，必须一起备份。当前架构假设单实例和本地磁盘；如果需要多实例或多用户并发，应先迁移到 PostgreSQL、对象存储和持久任务队列。
 
-- TXT、Markdown、RTF、DOC、DOCX 走本地抽取。
-- TXT、Markdown 优先按 UTF-8 严格解码，失败后回退到 GBK/GB18030，避免中文旧编码文件进入题目时变成乱码。
-- RTF、DOC、DOCX 抽取后的文本会做常见中文 mojibake 修复，例如把 `ÄÑÊÜ` 还原为 `难受`。
-- PDF、PPT、Excel、CSV、HTML、JSON、XML、log 等复杂格式不再作为笔头作业上传入口支持。
+写作 AI 当前依赖进程内 `after()`，不是持久任务队列。进程重启可能留下 `PENDING` 作业，这是后续架构优化项。
 
-Kimi 调用在 `src/lib/ai/kimi.ts`：
+## API 概览
 
-- `/chat/completions` 用于结构化写作内容。
-- 结构化返回必须是 JSON，并通过 Zod schema 校验。
+- 认证：`POST /api/auth/login`、`POST /api/auth/logout`
+- 健康：`GET /api/health`
+- Dashboard：`GET /api/dashboard`
+- 文件：`GET /api/files/[id]`
+- 写作：`GET|POST /api/assignments/writing`，`GET|PATCH|DELETE /api/assignments/writing/[id]`
+- 写作答案与批阅：`PATCH .../answer`、`POST .../feedback`
+- 口语：`GET|POST /api/assignments/speaking`，`GET|PATCH|DELETE /api/assignments/speaking/[id]`
+- 口语批阅：`POST /api/assignments/speaking/[id]/review`
+- 录音：`POST /api/recordings`、`DELETE /api/recordings/[id]`
+- 课件：`GET|POST /api/materials`、`GET|DELETE /api/materials/[id]`
 
-Fallback 在 `src/lib/ai/fallback.ts`：
+## 验证与发布
 
-- 新上传的写作作业不再展示或保存基础拆分 fallback；只有 AI 结构化成功后才显示题目。
-- 口语上传当前不走 AI，也不走 fallback；TXT/RTF 会在 `src/lib/assignment/speaking-text.ts` 中本地转文本并拆句。
-- 写作上传当前不再调用 Kimi Files API 做文件提取；TXT、Markdown、RTF、DOC 和 DOCX 会在服务端本地抽取文本，再交给 Kimi 做题目结构化。
-
-当前写作提示词在：
-
-- `src/prompts/writing-assignment-structure.prompt.ts`
-
-`src/prompts/speaking-assignment-structure.prompt.ts` 是历史口语 AI 结构化提示词；当前口语上传不再调用它。
-
-## Data Model
-
-主要 Prisma 模型：
-
-- `UserSession`：登录 session。
-- `Assignment`：写作或口语作业主表。
-- `AssignmentSection`：写作题目。
-- `TeacherFeedback`：写作题目批阅。
-- `SpeakingUnit`：口语朗读单元。
-- `Recording`：口语录音文件；全文录音挂 `Assignment`，逐句录音挂 `SpeakingUnit`。
-- `SpeakingFeedback`：历史口语录音批阅模型，当前三档发音判断写在 `SpeakingUnit.reviewLevel` / `reviewScore`。
-- `CourseMaterial`：课件文件、类型和分类。
-
-SQLite 文件默认位置：
-
-```text
-prisma/dev.db
-```
-
-本地和生产都要把 SQLite 文件视为真实数据，不要误删或随意覆盖。
-
-## API Overview
-
-认证：
-
-- `POST /api/auth/login`
-- `POST /api/auth/logout`
-
-健康检查：
-
-- `GET /api/health`
-
-Dashboard：
-
-- `GET /api/dashboard`
-
-文件：
-
-- `GET /api/files/[id]?kind=assignment|material|recording`
-
-写作：
-
-- `GET /api/assignments/writing`
-- `POST /api/assignments/writing`
-- `GET /api/assignments/writing/[id]`
-- `PATCH /api/assignments/writing/[id]`
-- `DELETE /api/assignments/writing/[id]`
-- `PATCH /api/assignments/writing/[id]/answer`
-- `POST /api/assignments/writing/[id]/feedback`
-- `POST /api/assignments/writing/[id]/restructure`
-
-口语：
-
-- `GET /api/assignments/speaking`
-- `POST /api/assignments/speaking`
-- `GET /api/assignments/speaking/[id]`
-- `PATCH /api/assignments/speaking/[id]`
-- `DELETE /api/assignments/speaking/[id]`
-- `POST /api/assignments/speaking/[id]/review`
-
-录音：
-
-- `POST /api/recordings`
-- `DELETE /api/recordings/[id]`
-
-课件：
-
-- `GET /api/materials`
-- `POST /api/materials`
-- `GET /api/materials/[id]`
-- `PATCH /api/materials/[id]`
-- `DELETE /api/materials/[id]`
-
-## Testing
-
-当前测试覆盖：
-
-- AI fallback 不包含已废弃字段。
-- 写作结构 normalization 和批阅统计。
-- sanitize 工具。
-- 写作批阅 API 的鉴权、创建反馈和统计更新。
-- 口语批阅 API 的鉴权、句子评分和综合分更新。
-
-运行：
+提交前至少执行：
 
 ```bash
-npm run test
-```
-
-生产交接文档记录的本地验证命令：
-
-```bash
-npm run test
+npm run check
 npm run build
+npm audit --omit=dev
 ```
 
-当前没有需要在交接中特别忽略的已知 build warning。
-
-## Production Release
-
-生产服务器代码目录：
-
-```text
-/var/www/VietTutor-Studio
-```
-
-普通发布：
-
-```bash
-cd /var/www/VietTutor-Studio
-bash scripts/deploy.sh
-```
-
-包含 Prisma schema 变更的发布：
-
-```bash
-cd /var/www/VietTutor-Studio
-bash scripts/deploy.sh --with-db-push
-```
-
-2026-05-25 的性能优化新增了 Prisma 索引，需要使用 `--with-db-push`。2026-05-26 的课件库精简移除了课件进度、状态、页数和备注字段，也需要使用 `--with-db-push`。2026-05-31 的口语作业改造新增了全文录音关联、录音类型和句子评分字段，同样需要使用 `--with-db-push`。
-
-发布脚本会执行：
-
-1. `git pull`
-2. `npm ci`
-3. 可选 `npm run db:push`
-4. `npm run build`
-5. `systemctl restart vietutor-studio`
-6. 输出服务状态
-
-schema 变更、AI 行为变更、上传逻辑变更前，建议先备份：
-
-```text
-/var/www/VietTutor-Studio/prisma/dev.db
-/var/www/VietTutor-Studio/uploads
-/etc/nginx/conf.d/viettutor.conf
-/etc/nginx/ssl/vietkiet.cn
-```
-
-首次启用课件/上传文件加速时，还需要在 Nginx HTTPS server 中加入内部上传目录，并在服务器 `.env` 设置 `PROTECTED_FILE_ACCEL_REDIRECT_PREFIX="/_protected_uploads/"`：
-
-```nginx
-location /_protected_uploads/ {
-    internal;
-    alias /var/www/VietTutor-Studio/uploads/;
-    sendfile on;
-    tcp_nopush on;
-}
-```
-
-改完后执行：
-
-```bash
-nginx -t
-systemctl reload nginx
-systemctl restart vietutor-studio
-```
-
-## Production Operations
-
-常用服务命令：
-
-```bash
-systemctl status vietutor-studio --no-pager
-systemctl restart vietutor-studio
-journalctl -u vietutor-studio -n 100 --no-pager
-```
-
-Nginx：
-
-```bash
-nginx -t
-systemctl reload nginx
-systemctl status nginx --no-pager
-```
-
-健康检查：
-
-```bash
-curl -I http://127.0.0.1:3000
-curl -I https://vietkiet.cn/api/health
-curl -I https://www.vietkiet.cn
-```
-
-HTTPS 当前使用手动部署的阿里云个人测试证书，路径见 `PRODUCTION_STATUS.md`。证书较短期，记得提前更换。
-
-## Known Pitfalls
-
-- 不要把 PM2 当成当前生产方案。生产稳定运行方式是 `systemd`。
-- 老服务名 `viettutor.service` 曾造成 3000 端口冲突，排障时注意是否有遗留服务。
-- `certbot` 在当前环境验证不稳定，现有 HTTPS 路径是手动部署阿里云证书。
-- Kimi `finish_reason=length` 通常意味着结构化输出被截断。写作作业会显示 AI 失败原因并保留等待重试状态，可调高 `KIMI_MAX_TOKENS` 后重新调用 AI。
-- Kimi `UND_ERR_HEADERS_TIMEOUT` / `HeadersTimeoutError` 表示请求已发出但上游长时间没有返回响应头，通常是上游排队、模型响应慢、网络抖动或输入过长；可适当增大 `KIMI_REQUEST_TIMEOUT_MS` 和 `KIMI_MAX_RETRIES`。
-- 笔头作业已限制为 TXT、Word、Markdown 和 RTF。PDF/PPT/Excel/CSV/HTML/JSON/XML 等格式会直接被拒绝，应先转成支持格式再上传。
-- 口语作业已改为 TXT/RTF 本地拆句，不再调用 Kimi；如果上传 DOC/PDF/PPT 等其它格式，会直接被拒绝。
-- `.env`、`prisma/dev.db` 和 `uploads/` 都是服务器本地状态，不应该提交到 Git。
-- 部署后旧页面提交可能出现 `Failed to find Server Action`，通常刷新浏览器即可。
-- 写作上传会先本地抽取文本再后台结构化；如遇 Kimi 超时，通常发生在结构化阶段而不是文件提取阶段。
-
-## Handoff Checklist
-
-接手或继续开发前：
-
-- 先看 `git status --short`，确认工作区是否干净。
-- 读 `PRODUCTION_STATUS.md`，不要假设线上一定等于本地或 GitHub main。
-- 如果要发版，先确认生产当前 commit。
-- 如果改 Prisma schema，发布前备份 SQLite 和 uploads，并用 `--with-db-push`。
-- 如果改上传、AI、文件删除或重试逻辑，重点检查是否会覆盖用户答案、批阅或录音。
-- 如果改认证，确认 middleware、API 鉴权和 Cookie 签名逻辑一起工作。
-- 如果改文件访问，确认仍然只能从 `uploads/` 安全读取。
-
-## Roadmap Notes
-
-设置页里预留了后续方向：
-
-- 词汇本模块
-- 错题本模块
-- 学习日历模块
-- 自动发音评分
-- AI 复习题生成
-
-这些目前是产品方向提示，不代表已经实现。
+生产部署、SQLite 备份、Nginx、证书续签和回滚只维护在 `DEPLOY_ALIYUN.md`。当前线上证据、证书到期时间和待办只维护在 `PRODUCTION_STATUS.md`。

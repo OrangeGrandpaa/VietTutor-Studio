@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { Route } from "next";
 import { notFound } from "next/navigation";
+import { AssignmentType } from "@prisma/client";
 
 import { AssignmentStatusBadge } from "@/components/assignment/assignment-status-badge";
 import { AssignmentTitleEditor } from "@/components/assignment/assignment-title-editor";
@@ -29,7 +30,7 @@ export default async function WritingAssignmentDetailPage({
   const { id } = await params;
   const wrongOnly = (await searchParams)?.wrongOnly === "1";
   const assignment = await prisma.assignment.findUnique({
-    where: { id },
+    where: { id, type: AssignmentType.WRITING },
     include: {
       sections: {
         orderBy: { orderIndex: "asc" },

@@ -105,7 +105,11 @@ export default async function MaterialsPage({
             <Link
               key={label}
               href={value ? `/materials?type=${value}` : "/materials"}
-              className={buttonVariants({ variant: type === value ? "default" : "outline", size: "sm" })}
+              aria-current={(type ?? "") === value ? "page" : undefined}
+              className={buttonVariants({
+                variant: (type ?? "") === value ? "default" : "outline",
+                size: "sm"
+              })}
             >
               {label}
             </Link>

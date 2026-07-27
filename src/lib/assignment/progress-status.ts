@@ -60,7 +60,7 @@ export function getItemProgressStatus({
 export function progressStatusLabel(status: AssignmentProgressStatus | ItemProgressStatus) {
   switch (status) {
     case "NOT_STARTED":
-      return "还没做:3";
+      return "还没做";
     case "IN_PROGRESS":
       return "还没做完！";
     case "UNREVIEWED":

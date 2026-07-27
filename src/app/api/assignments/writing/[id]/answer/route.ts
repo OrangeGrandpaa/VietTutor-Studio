@@ -23,6 +23,10 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     return jsonError("缺少题目。");
   }
 
+  if (body.answer !== undefined && typeof body.answer !== "string") {
+    return jsonError("学生答案格式不正确。");
+  }
+
   const section = await prisma.assignmentSection.findFirst({
     where: {
       id: body.sectionId,
@@ -35,6 +39,14 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   }
 
   const nextAnswer = sanitizeOptionalText(body.answer) ?? null;
+
+  if (section.vietnameseText === nextAnswer) {
+    return jsonOk({
+      success: true,
+      unchanged: true,
+      message: "答案没有变化，原批阅结果已保留。"
+    });
+  }
 
   await prisma.$transaction(async (tx) => {
     await tx.assignmentSection.update({

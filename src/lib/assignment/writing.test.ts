@@ -125,7 +125,7 @@ describe("writing helpers", () => {
       vietnameseText: null,
       chineseTranslation: null,
       detectedLevel: null,
-      displayType: "SENTENCE",
+      displayType: "SENTENCE" as const,
       orderIndex: index + 1,
       createdAt: now,
       updatedAt: now,

@@ -1,3 +1,4 @@
+import { AssignmentType } from "@prisma/client";
 import { NextRequest } from "next/server";
 
 import { ensureAuthenticatedApi } from "@/lib/auth/session";
@@ -12,7 +13,7 @@ export async function GET(_: NextRequest, { params }: { params: Promise<{ id: st
 
   const { id } = await params;
   const assignment = await prisma.assignment.findUnique({
-    where: { id },
+    where: { id, type: AssignmentType.SPEAKING },
     include: {
       recordings: {
         orderBy: { createdAt: "desc" }
@@ -43,7 +44,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     | null;
 
   const assignment = await prisma.assignment.findUnique({
-    where: { id },
+    where: { id, type: AssignmentType.SPEAKING },
     include: {
       recordings: true,
       speakingUnits: { include: { recordings: true } }
@@ -60,7 +61,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   if (!title) return jsonError("没有可更新的内容。");
 
   const updated = await prisma.assignment.update({
-    where: { id },
+    where: { id, type: AssignmentType.SPEAKING },
     data: { title }
   });
 
@@ -73,7 +74,7 @@ export async function DELETE(_: NextRequest, { params }: { params: Promise<{ id:
 
   const { id } = await params;
   const assignment = await prisma.assignment.findUnique({
-    where: { id },
+    where: { id, type: AssignmentType.SPEAKING },
     include: {
       recordings: true,
       speakingUnits: {
@@ -94,7 +95,7 @@ export async function DELETE(_: NextRequest, { params }: { params: Promise<{ id:
     await deleteFile(recording.filePath);
   }
 
-  await prisma.assignment.delete({ where: { id } });
+  await prisma.assignment.delete({ where: { id, type: AssignmentType.SPEAKING } });
   await deleteFile(assignment.originalFilePath);
 
   return jsonOk({ success: true });

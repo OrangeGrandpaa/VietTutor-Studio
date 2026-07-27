@@ -141,6 +141,12 @@ export async function getDashboardData() {
       }
     }),
     prisma.assignment.findMany({
+      where: {
+        OR: [
+          { type: AssignmentType.WRITING, accuracyScore: { not: null } },
+          { type: AssignmentType.SPEAKING, overallScore: { not: null } }
+        ]
+      },
       take: 10,
       orderBy: { createdAt: "desc" },
       select: {
@@ -180,10 +186,12 @@ export async function getDashboardData() {
     .reverse()
     .map((item) => ({
       date: item.createdAt.toISOString().slice(5, 10),
-      accuracy:
-        item.type === AssignmentType.WRITING
-          ? item.accuracyScore ?? 0
-          : speakingScoreToPercent(item.overallScore)
+      writingAccuracy:
+        item.type === AssignmentType.WRITING ? item.accuracyScore : null,
+      speakingScore:
+        item.type === AssignmentType.SPEAKING
+          ? speakingScoreToPercent(item.overallScore)
+          : null
     }));
   const speakingScores = speakingAssignmentsForScore.flatMap((item) => {
     const normalized = normalizeSpeakingScore(item.overallScore);

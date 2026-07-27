@@ -5,8 +5,14 @@ import path from "node:path";
 
 import { randomUUID } from "node:crypto";
 
+import {
+  normalizeFileExtension,
+  resolveValidatedFileMimeType
+} from "@/lib/storage/file-types";
 import { getMaxUploadSizeBytes } from "@/lib/utils/env";
 import type { SavedFile, StorageBucket } from "@/lib/storage/types";
+
+export { validateFileType } from "@/lib/storage/file-types";
 
 const uploadsRoot = path.join(process.cwd(), "uploads");
 
@@ -21,7 +27,7 @@ export class StorageValidationError extends Error {
 }
 
 function normalizeExtension(originalName: string) {
-  return path.extname(originalName).toLowerCase();
+  return normalizeFileExtension(originalName);
 }
 
 export function generateSafeFileName(originalName: string) {
@@ -35,18 +41,6 @@ export function generateSafeFileName(originalName: string) {
 
   const fallback = baseName || "file";
   return `${Date.now()}-${randomUUID()}-${fallback}${extension}`;
-}
-
-export function validateFileType(
-  fileName: string,
-  mimeType: string,
-  options: { allowedExtensions: string[]; allowedMimeTypes: string[] }
-) {
-  const extension = normalizeExtension(fileName);
-  return (
-    options.allowedExtensions.includes(extension) ||
-    options.allowedMimeTypes.includes(mimeType.toLowerCase())
-  );
 }
 
 export function validateFileSize(size: number) {
@@ -76,7 +70,12 @@ export async function saveUploadedFile(params: {
     throw new StorageValidationError("File too large.", "FILE_TOO_LARGE");
   }
 
-  if (!validateFileType(file.name, file.type, { allowedExtensions, allowedMimeTypes })) {
+  const validatedMimeType = resolveValidatedFileMimeType(file.name, file.type, {
+    allowedExtensions,
+    allowedMimeTypes
+  });
+
+  if (!validatedMimeType) {
     throw new StorageValidationError("Unsupported file type.", "UNSUPPORTED_FILE_TYPE");
   }
 
@@ -94,7 +93,7 @@ export async function saveUploadedFile(params: {
     storedName,
     relativePath,
     absolutePath,
-    mimeType: file.type || "application/octet-stream",
+    mimeType: validatedMimeType,
     size: file.size
   } satisfies SavedFile;
 }

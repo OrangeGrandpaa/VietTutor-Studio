@@ -58,7 +58,7 @@ describe("assignment progress status helpers", () => {
   });
 
   it("uses the requested Chinese labels", () => {
-    expect(progressStatusLabel("NOT_STARTED")).toBe("还没做:3");
+    expect(progressStatusLabel("NOT_STARTED")).toBe("还没做");
     expect(progressStatusLabel("IN_PROGRESS")).toBe("还没做完！");
     expect(progressStatusLabel("UNREVIEWED")).toBe("未批阅");
     expect(progressStatusLabel("REVIEWING")).toBe("批阅中");

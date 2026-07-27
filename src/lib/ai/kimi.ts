@@ -3,12 +3,12 @@ import "server-only";
 import { Agent, type Dispatcher } from "undici";
 import { z } from "zod";
 
-import { speakingAssignmentStructurePrompt } from "@/prompts/speaking-assignment-structure.prompt";
 import { writingAssignmentStructurePrompt } from "@/prompts/writing-assignment-structure.prompt";
 import { getEnv } from "@/lib/utils/env";
-import type { SpeakingStructuredContent, WritingStructuredContent } from "@/types/assignment";
+import type { WritingStructuredContent } from "@/types/assignment";
 
 const DEFAULT_STRUCTURED_OUTPUT_MAX_TOKENS = 8192;
+const DEFAULT_KIMI_MAX_INPUT_CHARS = 200000;
 const DEFAULT_KIMI_REQUEST_TIMEOUT_MS = 600000;
 const DEFAULT_KIMI_MAX_RETRIES = 1;
 
@@ -44,23 +44,15 @@ const writingSchema = z.object({
     .default([])
 });
 
-const speakingSchema = z.object({
-  title: z.string().default("未命名口语作业"),
-  assignment_type: z.literal("speaking"),
-  units: z.array(
-    z.object({
-      unit_type: z.enum(["word", "phrase", "sentence", "paragraph", "article", "dialogue"]),
-      content: z.string().default(""),
-      order_index: z.number().int().positive()
-    })
-  )
-});
-
 function getStructuredOutputMaxTokens() {
   const configured = Number(process.env.KIMI_MAX_TOKENS ?? DEFAULT_STRUCTURED_OUTPUT_MAX_TOKENS);
   return Number.isFinite(configured) && configured > 0
     ? Math.floor(configured)
     : DEFAULT_STRUCTURED_OUTPUT_MAX_TOKENS;
+}
+
+function getKimiMaxInputChars() {
+  return getPositiveIntegerEnv("KIMI_MAX_INPUT_CHARS", DEFAULT_KIMI_MAX_INPUT_CHARS);
 }
 
 function getPositiveIntegerEnv(name: string, fallback: number) {
@@ -186,6 +178,29 @@ function isTransientKimiFetchError(error: unknown) {
   return error instanceof TypeError && error.message === "fetch failed";
 }
 
+function isTransientKimiResponse(status: number) {
+  return status === 408 || status === 425 || status === 429 || status >= 500;
+}
+
+function getKimiRetryDelayMs(response: Response, attempt: number) {
+  const retryAfter = response.headers.get("retry-after");
+  if (retryAfter) {
+    const seconds = Number(retryAfter);
+    const retryAt = Date.parse(retryAfter);
+    const requestedDelay = Number.isFinite(seconds)
+      ? seconds * 1000
+      : Number.isFinite(retryAt)
+        ? retryAt - Date.now()
+        : 0;
+
+    if (requestedDelay > 0) {
+      return Math.min(requestedDelay, 10000);
+    }
+  }
+
+  return Math.min(1000 * 2 ** attempt, 5000);
+}
+
 async function fetchKimi(operation: string, url: string, init: RequestInit) {
   const timeoutMs = getKimiRequestTimeoutMs();
   const maxRetries = getKimiMaxRetries();
@@ -197,11 +212,18 @@ async function fetchKimi(operation: string, url: string, init: RequestInit) {
     let retryDelayMs = 0;
 
     try {
-      return await fetch(url, {
+      const response = await fetch(url, {
         ...init,
         signal: controller.signal,
         dispatcher: getKimiDispatcher(timeoutMs)
       } as RequestInit & { dispatcher: Dispatcher });
+
+      if (attempt < maxRetries && isTransientKimiResponse(response.status)) {
+        retryDelayMs = getKimiRetryDelayMs(response, attempt);
+        await response.body?.cancel().catch(() => undefined);
+      } else {
+        return response;
+      }
     } catch (error) {
       lastError = error;
 
@@ -296,6 +318,13 @@ export async function callKimiModel(prompt: string, input: string) {
 }
 
 export async function structureWritingAssignment(markdownContent: string) {
+  const maxInputChars = getKimiMaxInputChars();
+  if (markdownContent.length > maxInputChars) {
+    throw new Error(
+      `作业文本过长（${markdownContent.length} 字符），超过 KIMI_MAX_INPUT_CHARS=${maxInputChars}。请拆分文件后重试。`
+    );
+  }
+
   const raw = await callKimiModel(
     writingAssignmentStructurePrompt,
     `以下是上传的笔头作业题目内容，请按部分和题目进行结构化整理：\n\n${markdownContent}`
@@ -303,14 +332,4 @@ export async function structureWritingAssignment(markdownContent: string) {
 
   const parsed = parseJsonResponse(raw);
   return writingSchema.parse(parsed) as WritingStructuredContent;
-}
-
-export async function structureSpeakingAssignment(markdownContent: string) {
-  const raw = await callKimiModel(
-    speakingAssignmentStructurePrompt,
-    `以下是上传的口语练习内容，请结构化整理：\n\n${markdownContent}`
-  );
-
-  const parsed = parseJsonResponse(raw);
-  return speakingSchema.parse(parsed) as SpeakingStructuredContent;
 }

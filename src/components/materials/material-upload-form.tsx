@@ -104,7 +104,13 @@ export function MaterialUploadForm() {
         >
           <div className="space-y-2">
             <Label htmlFor="material-file">课件文件</Label>
-            <Input id="material-file" name="file" type="file" required />
+            <Input
+              id="material-file"
+              name="file"
+              type="file"
+              accept=".pdf,.doc,.docx,.ppt,.pptx,.md,.markdown,.jpg,.jpeg,.png,.webp,.mp3,.wav,.m4a,.mp4,.mov"
+              required
+            />
           </div>
           <div className="space-y-2">
             <Label htmlFor="material-title">标题</Label>

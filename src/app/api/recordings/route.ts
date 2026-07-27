@@ -2,8 +2,9 @@ import { NextRequest } from "next/server";
 import { AssignmentType, RecordingKind } from "@prisma/client";
 
 import { ensureAuthenticatedApi } from "@/lib/auth/session";
+import { refreshSpeakingAssignmentSummary } from "@/lib/assignment/speaking-summary";
 import { prisma } from "@/lib/db/prisma";
-import { saveUploadedFile } from "@/lib/storage";
+import { deleteFile, saveUploadedFile } from "@/lib/storage";
 import { jsonError, jsonOk } from "@/lib/utils/http";
 
 export async function POST(request: NextRequest) {
@@ -38,15 +39,22 @@ export async function POST(request: NextRequest) {
     }
   }
 
+  let unitAssignmentId: string | null = null;
+
   if (speakingUnitId) {
-    const unit = await prisma.speakingUnit.findUnique({
-      where: { id: speakingUnitId },
-      select: { id: true }
+    const unit = await prisma.speakingUnit.findFirst({
+      where: {
+        id: speakingUnitId,
+        assignment: { type: AssignmentType.SPEAKING }
+      },
+      select: { id: true, assignmentId: true }
     });
 
     if (!unit) {
       return jsonError("朗读句子不存在。", 404);
     }
+
+    unitAssignmentId = unit.assignmentId;
   }
 
   const saved = await saveUploadedFile({
@@ -63,16 +71,36 @@ export async function POST(request: NextRequest) {
     ]
   });
 
-  const recording = await prisma.recording.create({
-    data: {
-      assignmentId: assignmentId ?? null,
-      speakingUnitId: speakingUnitId ?? null,
-      kind,
-      filePath: saved.relativePath,
-      duration: Number.isFinite(duration) ? duration : null,
-      mimeType: saved.mimeType
-    }
-  });
+  try {
+    const recording = await prisma.$transaction(async (tx) => {
+      const created = await tx.recording.create({
+        data: {
+          assignmentId: assignmentId ?? null,
+          speakingUnitId: speakingUnitId ?? null,
+          kind,
+          filePath: saved.relativePath,
+          duration: Number.isFinite(duration) ? duration : null,
+          mimeType: saved.mimeType
+        }
+      });
 
-  return jsonOk({ success: true, recording }, 201);
+      if (kind === RecordingKind.STUDENT && speakingUnitId && unitAssignmentId) {
+        await tx.speakingUnit.update({
+          where: { id: speakingUnitId },
+          data: {
+            reviewLevel: null,
+            reviewScore: null
+          }
+        });
+        await refreshSpeakingAssignmentSummary(tx, unitAssignmentId);
+      }
+
+      return created;
+    });
+
+    return jsonOk({ success: true, recording }, 201);
+  } catch (error) {
+    await deleteFile(saved.relativePath).catch(() => undefined);
+    throw error;
+  }
 }

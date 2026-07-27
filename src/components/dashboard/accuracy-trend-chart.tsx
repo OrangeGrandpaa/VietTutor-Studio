@@ -1,10 +1,11 @@
 "use client";
 
-import { Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 
 type TrendPoint = {
   date: string;
-  accuracy: number;
+  writingAccuracy: number | null;
+  speakingScore: number | null;
 };
 
 export function AccuracyTrendChart({ data }: { data: TrendPoint[] }) {
@@ -15,13 +16,26 @@ export function AccuracyTrendChart({ data }: { data: TrendPoint[] }) {
           <XAxis dataKey="date" stroke="currentColor" fontSize={12} />
           <YAxis stroke="currentColor" fontSize={12} width={40} domain={[0, 100]} />
           <Tooltip />
+          <Legend />
           <Line
             type="monotone"
-            dataKey="accuracy"
+            dataKey="writingAccuracy"
+            name="写作正确率"
             stroke="hsl(var(--primary))"
             strokeWidth={3}
             dot={{ fill: "hsl(var(--primary))", r: 4 }}
             activeDot={{ r: 6 }}
+            connectNulls
+          />
+          <Line
+            type="monotone"
+            dataKey="speakingScore"
+            name="口语分数（折算）"
+            stroke="hsl(153 46% 42%)"
+            strokeWidth={3}
+            dot={{ fill: "hsl(153 46% 42%)", r: 4 }}
+            activeDot={{ r: 6 }}
+            connectNulls
           />
         </LineChart>
       </ResponsiveContainer>
